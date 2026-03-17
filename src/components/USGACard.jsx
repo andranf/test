@@ -182,10 +182,10 @@ export default function USGACard({ data, loading }) {
                 </defs>
                 <XAxis dataKey="date"
                   tick={{ fontSize:9, fill:"rgba(255,255,255,0.3)" }} tickLine={false} axisLine={false} interval={3} />
-                <YAxis domain={[2.7,3.7]}
+                <YAxis domain={[9.0,12.0]}
                   tick={{ fontSize:9, fill:"rgba(255,255,255,0.3)" }} tickLine={false} axisLine={false} />
                 <Tooltip content={<DarkTooltip />} />
-                <ReferenceLine y={3.2} stroke="rgba(255,255,255,0.12)" strokeDasharray="4 4" />
+                <ReferenceLine y={10.5} stroke="rgba(255,255,255,0.12)" strokeDasharray="4 4" />
                 <Area dataKey="stimp" name="Stimp" stroke="#60a5fa" strokeWidth={2}
                   fill="url(#stimpArea)" dot={false} activeDot={{ r:3, fill:"#60a5fa" }} />
               </AreaChart>

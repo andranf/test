@@ -82,6 +82,11 @@ export default function App() {
   ];
 
   const today  = new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
+  const pennantDate = new Date("2026-04-25");
+  const hole4Date   = new Date("2026-04-10");
+  const daysTo = (d) => Math.ceil((d - new Date()) / 86400000);
+  const pennantDays = daysTo(pennantDate);
+  const hole4Days   = daysTo(hole4Date);
   const health = courseHealthPct(greenkeeper);
   const stimp  = usga?.metrics?.find(m => m.name.toLowerCase().includes("speed") || m.name.toLowerCase().includes("stimp"))?.value;
   const overdueCount = jobs?.byStatus?.Overdue ?? null;
@@ -122,6 +127,17 @@ export default function App() {
               <p className="text-xs mt-2 font-medium" style={{ color: "rgba(255,255,255,0.3)" }}>
                 {today} · Always below par
               </p>
+              {/* Milestone pills */}
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                  style={{ background:"rgba(251,191,36,0.12)", color:"#fcd34d", border:"1px solid rgba(251,191,36,0.25)" }}>
+                  Div 1 Pennant — {pennantDays}d
+                </span>
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                  style={{ background:"rgba(52,211,153,0.10)", color:"#6ee7b7", border:"1px solid rgba(52,211,153,0.22)" }}>
+                  4th hole opens — {hole4Days}d
+                </span>
+              </div>
             </div>
 
             {/* Quick-look KPIs */}
