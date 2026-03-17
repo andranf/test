@@ -68,25 +68,31 @@ function mapReading(station, reading, forecast) {
   const get = (key) => reading?.[key]?.Value ?? reading?.[key] ?? null;
 
   const tempF       = get("AirTemperature") ?? get("Temperature");
-  const windSpeed   = get("WindSpeed");
+  const windSpeedMph = get("WindSpeed");
   const windDir     = get("WindDirection");
   const humidity    = get("RelativeHumidity") ?? get("Humidity");
-  const rainfall    = get("Precipitation") ?? get("Rainfall") ?? get("Rain");
-  const dewPoint    = get("DewPoint");
+  const rainfallIn  = get("Precipitation") ?? get("Rainfall") ?? get("Rain");
+  const dewPointF   = get("DewPoint");
   const solarRad    = get("SolarRadiation") ?? get("Solar");
 
+  // Convert imperial → metric
+  const tempC      = tempF       != null ? (tempF - 32) * 5 / 9        : null;
+  const windSpeed  = windSpeedMph != null ? windSpeedMph * 1.60934      : null;
+  const rainfall   = rainfallIn  != null ? rainfallIn * 25.4            : null;
+  const dewPoint   = dewPointF   != null ? (dewPointF - 32) * 5 / 9    : null;
+
   let conditions = "Clear";
-  if (rainfall > 0.1)   conditions = "Rainy";
+  if (rainfall > 2.5)  conditions = "Rainy";
   else if (humidity > 85) conditions = "Humid / Overcast";
   else if (solarRad < 200) conditions = "Partly Cloudy";
   else                    conditions = "Mostly Sunny";
 
   return {
-    temperature:    tempF     != null ? +tempF.toFixed(1)     : null,
+    temperature:    tempC     != null ? +tempC.toFixed(1)     : null,
     humidity:       humidity  != null ? +humidity.toFixed(1)  : null,
     windSpeed:      windSpeed != null ? +windSpeed.toFixed(1) : null,
     windDirection:  windDir ?? "—",
-    rainfall:       rainfall  != null ? +rainfall.toFixed(2)  : null,
+    rainfall:       rainfall  != null ? +rainfall.toFixed(1)  : null,
     dewPoint:       dewPoint  != null ? +dewPoint.toFixed(1)  : null,
     solarRadiation: solarRad  != null ? +solarRad.toFixed(0)  : null,
     stationName:    station.StationName ?? station.Name ?? "Weather Station",
