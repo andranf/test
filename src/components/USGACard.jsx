@@ -115,7 +115,7 @@ export default function USGACard({ data, loading }) {
                     WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text",
                   }}
                 />
-                <span className="text-xl font-bold" style={{ color:"rgba(96,165,250,0.6)" }}>m</span>
+                <span className="text-xl font-bold" style={{ color:"rgba(96,165,250,0.6)" }}>{stimpM.unit}</span>
               </div>
               <div className="flex items-center gap-2 mt-1">
                 <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
@@ -127,7 +127,7 @@ export default function USGACard({ data, loading }) {
                   {S[stimpM.status]?.label}
                 </span>
                 <span className="text-xs" style={{ color:"rgba(255,255,255,0.35)" }}>
-                  Target {stimpM.target}m · Range {stimpM.min}–{stimpM.max}m
+                  Target {stimpM.target}{stimpM.unit} · Range {stimpM.min}–{stimpM.max}{stimpM.unit}
                 </span>
               </div>
             </div>
