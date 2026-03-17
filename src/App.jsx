@@ -108,7 +108,7 @@ export default function App() {
             <div>
               <p className="text-xs font-bold tracking-[0.28em] uppercase mb-1"
                 style={{ color: "rgba(52,211,153,0.65)" }}>
-                Berwick · Victoria · Est. 1928
+                Cranbourne West · Victoria · Top 100
               </p>
               <div className="flex items-baseline gap-3">
                 <h1 className="text-5xl md:text-6xl font-black tracking-tight leading-none ranfurlie-title">

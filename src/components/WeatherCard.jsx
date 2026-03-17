@@ -1,6 +1,6 @@
 import { Wind, Droplets, CloudRain, Sun, Cloud, Thermometer } from "lucide-react";
 import AnimatedNumber from "./ui/AnimatedNumber";
-import { bentgrassStressIndex, dollarSpotRisk, couchDormancyStatus } from "../services/greenkeeperService";
+import { bentgrassStressIndex, dollarSpotRisk, brownPatchRisk, couchDormancyStatus } from "../services/greenkeeperService";
 
 // ── Weather icons ─────────────────────────────────────────────────────────────
 
@@ -11,42 +11,47 @@ const ICONS = {
 };
 
 // ── Bentgrass temperature window ──────────────────────────────────────────────
-// Creeping bentgrass: optimal 15–24°C, heat stress >28°C, dormancy risk <5°C
+// Bentgrass: optimal shoot growth 15–24°C air; root stress onset ~20°C soil;
+// root growth ceases ~25°C soil; dormancy risk <5°C.
 
 function TempWindowBar({ temp }) {
-  // Map 0–40°C onto the bar (0–100%)
   const SCALE_MAX = 40;
   const pos = Math.min(100, Math.max(0, (temp / SCALE_MAX) * 100));
-
+  // Estimate soil temp ~2°C below air
+  const soilEst  = temp - 2;
+  const stateColor = soilEst > 25 ? "#f87171"
+                   : soilEst > 20 ? "#fbbf24"
+                   : temp   >= 15 ? "#34d399"
+                   : temp   <   5 ? "#a78bfa"
+                   :                "#fbbf24";
+  const stateLabel = soilEst > 25 ? "Root stress" : soilEst > 20 ? "Root growth ↓" :
+                     temp >= 15   ? "Optimal"     : temp < 5     ? "Dormancy risk" : "Sub-optimal";
   return (
     <div>
       <div className="flex justify-between text-xs mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>
-        <span>Dormancy Risk</span>
-        <span style={{ color: temp >= 15 && temp <= 24 ? "#34d399" : temp > 28 ? "#f87171" : "#fbbf24" }}>
-          {temp >= 15 && temp <= 24 ? "Optimal" : temp > 28 ? "Heat Stress" : temp < 5 ? "Dormant" : "Sub-optimal"}
-        </span>
+        <span>Cold/Dormancy</span>
+        <span style={{ color: stateColor }}>{stateLabel}</span>
         <span>Heat Stress</span>
       </div>
-      {/* Track */}
       <div className="relative h-2 rounded-full overflow-visible" style={{ background: "rgba(255,255,255,0.07)" }}>
-        {/* Optimal zone overlay */}
+        {/* Optimal zone: 15–24°C air */}
         <div className="absolute h-2 rounded-sm" style={{
-          left: `${(15 / SCALE_MAX) * 100}%`,
-          width: `${((24 - 15) / SCALE_MAX) * 100}%`,
-          background: "rgba(52,211,153,0.2)",
-          border: "1px solid rgba(52,211,153,0.3)",
+          left:       `${(15 / SCALE_MAX) * 100}%`,
+          width:      `${((24 - 15) / SCALE_MAX) * 100}%`,
+          background: "rgba(52,211,153,0.22)",
+          border:     "1px solid rgba(52,211,153,0.35)",
         }} />
-        {/* Current temp needle */}
+        {/* Needle */}
         <div className="absolute top-[-4px] w-1 h-4 rounded-full transition-all duration-700"
           style={{
-            left: `calc(${pos}% - 2px)`,
-            background: temp >= 15 && temp <= 24 ? "#34d399" : temp > 28 ? "#f87171" : "#fbbf24",
-            boxShadow: `0 0 8px ${temp >= 15 && temp <= 24 ? "rgba(52,211,153,0.9)" : "rgba(251,191,36,0.9)"}`,
+            left:       `calc(${pos}% - 2px)`,
+            background: stateColor,
+            boxShadow:  `0 0 8px ${stateColor}cc`,
           }}
         />
       </div>
       <div className="flex justify-between text-xs mt-1" style={{ color: "rgba(255,255,255,0.22)" }}>
-        <span>0°</span><span>Bentgrass optimal 15–24°C</span><span>40°</span>
+        <span>0°</span><span>Bentgrass optimal 15–24°C air</span><span>40°</span>
       </div>
     </div>
   );
@@ -98,11 +103,12 @@ export default function WeatherCard({ data, loading }) {
 
   const temp = data.temperature ?? 0;
   const hum  = data.humidity    ?? 0;
-  const bsi  = bentgrassStressIndex(temp, hum);
-  const dsr  = dollarSpotRisk(temp, hum);
-  // Estimate soil temp as roughly 2–3°C below air temp (conservative)
-  const estimatedSoilTemp = temp - 2.5;
-  const dormancy = couchDormancyStatus(estimatedSoilTemp);
+  const bsi      = bentgrassStressIndex(temp, hum);
+  const dsr      = dollarSpotRisk(temp, hum);
+  const bpr      = brownPatchRisk(temp, hum);
+  // Soil temp estimated ~2°C below air (conservative for Cranbourne sandy loam)
+  const soilEst  = temp - 2;
+  const dormancy = couchDormancyStatus(soilEst);
 
   const tempGradient =
     temp > 28 ? "linear-gradient(135deg, #f97316 0%, #fbbf24 100%)" :
@@ -176,13 +182,17 @@ export default function WeatherCard({ data, loading }) {
           style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)" }}>
           <p className="section-label w-full mb-1">Turf Intelligence</p>
           <RiskBadge label="Dollar Spot" level={dsr} />
+          <RiskBadge label="Brown Patch" level={bpr} />
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-            dormancy.color === "green" ? "risk-low" : dormancy.color === "yellow" ? "risk-mod" : "risk-high"
+            dormancy.color === "green"  ? "risk-low" :
+            dormancy.color === "yellow" ? "risk-mod" : "risk-high"
           }`}>
             Couch: {dormancy.label}
           </span>
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full risk-low">
-            Bentgrass: {bsi < 30 ? "Unstressed" : bsi < 60 ? "Moderate" : "High Stress"}
+          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+            bsi < 30 ? "risk-low" : bsi < 60 ? "risk-mod" : "risk-high"
+          }`}>
+            Bentgrass BSI: {bsi < 30 ? "Low" : bsi < 60 ? "Moderate" : "High"}
           </span>
         </div>
 

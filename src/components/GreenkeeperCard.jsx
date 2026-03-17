@@ -27,9 +27,11 @@ function ZoneRow({ zone }) {
           style={{ background: c.dot, boxShadow: `0 0 6px ${c.dot}` }} />
         <div>
           <p className="text-sm font-semibold leading-tight" style={{ color:"rgba(255,255,255,0.85)" }}>{zone.name}</p>
-          <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${zone.type === "bentgrass" ? "chip-bentgrass" : "chip-couch"}`}
-            style={{ fontSize:"9px", padding:"1px 6px" }}>
-            {zone.type === "bentgrass" ? "Bentgrass" : "Couch"}
+          <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+            zone.type === "bentgrass" ? "chip-bentgrass" :
+            zone.type === "fescue"    ? "chip-bentgrass" : "chip-couch"
+          }`} style={{ fontSize:"9px", padding:"1px 6px" }}>
+            {zone.type === "bentgrass" ? "Bentgrass" : zone.type === "fescue" ? "Fescue ↗" : "Lg. Couch"}
           </span>
         </div>
       </div>
@@ -137,9 +139,29 @@ export default function GreenkeeperCard({ data, loading }) {
               )}
               {data.dollarSpotRisk && (
                 <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                  data.dollarSpotRisk === "High" ? "risk-high" : data.dollarSpotRisk === "Moderate" ? "risk-mod" : "risk-low"
+                  data.dollarSpotRisk === "High" ? "risk-high" : data.dollarSpotRisk.startsWith("Moderate") ? "risk-mod" : "risk-low"
                 }`}>
                   $ Spot: {data.dollarSpotRisk}
+                </span>
+              )}
+              {data.brownPatchRisk && data.brownPatchRisk !== "Low" && (
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                  data.brownPatchRisk === "High" ? "risk-high" : "risk-mod"
+                }`}>
+                  Brown Patch: {data.brownPatchRisk}
+                </span>
+              )}
+              {data.springDeadSpotRisk && data.springDeadSpotRisk !== "Low" && (
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                  data.springDeadSpotRisk === "High" ? "risk-high" : "risk-mod"
+                }`}>
+                  SDS Risk: {data.springDeadSpotRisk}
+                </span>
+              )}
+              {data.courseNews && (
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full"
+                  style={{ background:"rgba(212,175,55,0.1)", color:"#e5c76b", border:"1px solid rgba(212,175,55,0.2)" }}>
+                  📋 {data.courseNews}
                 </span>
               )}
             </div>

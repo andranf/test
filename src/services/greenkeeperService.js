@@ -1,119 +1,172 @@
 /**
  * Greenkeeper App Service — Ranfurlie Golf Club
+ * 825 Cranbourne Frankston Road, Cranbourne West VIC 3977
+ * Superintendent: Andrew Anderson
  *
- * Surfaces turf health data for two grass types:
+ * Two grass types managed on site:
+ *
  *   • Creeping Bentgrass (Agrostis stolonifera) — Greens & Tees
- *       Optimal VWC: 18–26%  |  Optimal soil temp: 15–24°C
- *       Disease risk: Dollar Spot (18–32°C + RH > 85%), Brown Patch (>28°C night + RH > 90%)
- *   • Wintergreen Couch (Cynodon dactylon 'Wintergreen') — Fairways, Surrounds & Rough
- *       Optimal VWC: 20–32%  |  Active growth: soil temp > 18°C
- *       Dormancy risk: soil temp < 15°C (common May–Sep at Berwick, VIC)
- *       Disease risk: Spring Dead Spot (post-dormancy recovery)
+ *       Optimal VWC (USGA sand): 18–24%  |  Wilt onset: 6–12%
+ *       Root stress onset: soil temp >20°C  |  Root growth ceases: >25°C
+ *       Shoot growth ceases: >32°C  |  Dormancy: <5°C
+ *       Dollar Spot: 15–30°C air + prolonged leaf wetness (>10 hrs dew/fog)
+ *                    Drought-stressed turf MORE susceptible
+ *       Brown Patch: night temp >20°C + RH >80% — peak Jan–Mar
+ *       Pythium Blight: day >29°C + wet night, spreads 24–48 hrs
+ *       Mowing height: 3.5–4.5 mm daily; 2.5–3.2 mm tournament
  *
- * TODO: Replace MOCK_MODE = false and configure BASE_URL + credentials.
+ *   • Legend Couch (Cynodon dactylon) — Fairways, Surrounds & Rough
+ *       VGA-recommended variety; seeded common couch
+ *       Optimal VWC: 20–30%  |  Active growth: soil temp >18°C
+ *       Dormancy: soil temp <10–15°C (June–Aug at Cranbourne)
+ *       Spring Dead Spot infection: soil temp declining through <21°C (March–April)
+ *       SDS highest risk: thatch >12 mm, late-season N, poor drainage
+ *       Mowing height: 10–15 mm fairways (peak), raise to 18–22 mm pre-dormancy
+ *       Note: Rough being converted to creeping fescue (>75,000 m² seeded to date)
+ *
+ *   Recent works: 4th green reconstructed Feb 2026 following contamination
+ *
+ * TODO: Set MOCK_MODE = false and configure BASE_URL + credentials.
  */
 
 const MOCK_MODE = true;
-const BASE_URL  = "https://your-greenkeeper-instance.com/api"; // TODO
-const AUTH_TOKEN = "YOUR_TOKEN";                               // TODO
+const BASE_URL   = "https://your-greenkeeper-instance.com/api"; // TODO
+const AUTH_TOKEN = "YOUR_TOKEN";                                // TODO
 
 async function fetchLive() {
   const headers = { Authorization: `Bearer ${AUTH_TOKEN}` };
   const [stressRes, irrigationRes] = await Promise.all([
-    fetch(`${BASE_URL}/stress`,             { headers }),
-    fetch(`${BASE_URL}/irrigation/schedule`,{ headers }),
+    fetch(`${BASE_URL}/stress`,              { headers }),
+    fetch(`${BASE_URL}/irrigation/schedule`, { headers }),
   ]);
-  const stress     = await stressRes.json();
-  const irrigation = await irrigationRes.json();
-  return { stress, irrigation };
+  return { stress: await stressRes.json(), irrigation: await irrigationRes.json() };
 }
 
-// ── Zone definitions ──────────────────────────────────────────────────────────
+// ── Zone definitions with correct agronomic targets ───────────────────────────
 
 const ZONES = [
-  { name: "Greens",     type: "bentgrass", icon: "⛳", targetMin: 18, targetMax: 26 },
-  { name: "Tees",       type: "bentgrass", icon: "🏌️", targetMin: 18, targetMax: 26 },
-  { name: "Fairways",   type: "couch",     icon: "🌿", targetMin: 20, targetMax: 32 },
-  { name: "Surrounds",  type: "couch",     icon: "🌿", targetMin: 20, targetMax: 32 },
-  { name: "Rough",      type: "couch",     icon: "🌾", targetMin: 18, targetMax: 35 },
+  // VWC targets: bentgrass 18–24% USGA sand; wilt onset ~8%
+  { name: "Greens",     type: "bentgrass", targetMin: 18, targetMax: 24 },
+  { name: "Tees",       type: "bentgrass", targetMin: 18, targetMax: 24 },
+  // Legend couch: 20–30% active growth, 8–12% during dormancy
+  { name: "Fairways",   type: "couch",     targetMin: 20, targetMax: 30 },
+  { name: "Surrounds",  type: "couch",     targetMin: 20, targetMax: 30 },
+  { name: "Rough",      type: "fescue",    targetMin: 18, targetMax: 32 }, // converting to fescue
 ];
 
 // ── Status helpers ────────────────────────────────────────────────────────────
 
 function moistureStatus(vwc, zone) {
   const { targetMin, targetMax } = zone;
-  if (vwc < targetMin - 4) return { status: "Critical",  color: "red"    };
-  if (vwc < targetMin)     return { status: "Stressed",  color: "orange" };
-  if (vwc > targetMax + 4) return { status: "Saturated", color: "orange" };
-  if (vwc > targetMax)     return { status: "Moist",     color: "yellow" };
-  return                          { status: "Good",      color: "green"  };
+  // Bentgrass wilt onset ~8–12%; couch can tolerate lower before wilt
+  const wiltThreshold = zone.type === "bentgrass" ? 10 : 14;
+  if (vwc <= wiltThreshold)      return { status: "Wilt Risk",  color: "red"    };
+  if (vwc < targetMin - 3)       return { status: "Critical",   color: "red"    };
+  if (vwc < targetMin)           return { status: "Stressed",   color: "orange" };
+  if (vwc > targetMax + 4)       return { status: "Saturated",  color: "orange" };
+  if (vwc > targetMax)           return { status: "Moist",      color: "yellow" };
+  return                                { status: "Good",       color: "green"  };
 }
 
 /**
- * Bentgrass heat stress index (0–100).
- * Combines air temperature and humidity into a simple stress score.
+ * Bentgrass heat/stress index (0–100).
+ * Based on soil temperature (critical threshold) + humidity.
+ * Research: root growth ceases >25°C soil; shoot ceases >32°C.
+ * Nighttime lows >21°C air are the most reliable early indicator.
  */
 export function bentgrassStressIndex(tempC, humidity) {
   let stress = 0;
-  if      (tempC > 35) stress += 55;
-  else if (tempC > 30) stress += 30 + (tempC - 30) * 5;
-  else if (tempC > 26) stress += (tempC - 26) * 7.5;
-  else if (tempC <  5) stress += 45;
-  else if (tempC < 10) stress += 25;
-  if      (humidity > 90) stress += 25;
-  else if (humidity > 80) stress += 12;
+  // Temperature stress — soil temps estimated roughly 1–3°C below air
+  const estSoilTemp = tempC - 2;
+  if      (estSoilTemp > 28) stress += 60;
+  else if (estSoilTemp > 25) stress += 35 + (estSoilTemp - 25) * 8;
+  else if (estSoilTemp > 20) stress += (estSoilTemp - 20) * 7;
+  else if (estSoilTemp <  5) stress += 45;
+  else if (estSoilTemp < 10) stress += 22;
+  // Humidity/disease pressure
+  if      (humidity > 90) stress += 20;
+  else if (humidity > 80) stress += 10;
   return Math.min(100, Math.round(stress));
 }
 
 /**
- * Dollar Spot risk level.
- * High risk: 18–32°C + RH > 85%
+ * Dollar Spot risk.
+ * Peak 15–30°C air temp + prolonged leaf wetness (dew, fog, high humidity).
+ * IMPORTANT: drought-stressed turf is MORE susceptible — not saturated.
+ * Low nitrogen also dramatically increases incidence.
  */
 export function dollarSpotRisk(tempC, humidity) {
-  if (tempC >= 18 && tempC <= 32 && humidity >= 90) return "High";
-  if (tempC >= 16 && tempC <= 34 && humidity >= 80) return "Moderate";
+  const inTempRange = tempC >= 15 && tempC <= 30;
+  if (inTempRange && humidity >= 90) return "High";
+  if (inTempRange && humidity >= 78) return "Moderate";
+  if (inTempRange && humidity >= 65) return "Low–Moderate";
   return "Low";
 }
 
 /**
- * Couch dormancy status based on soil temperature.
- * At Berwick VIC, typically dormant May–Sep.
+ * Brown Patch risk (Rhizoctonia solani).
+ * Daytime >27°C, nighttime lows >20°C, RH sustained >80%.
+ * Peak Melbourne risk: January–March.
+ */
+export function brownPatchRisk(tempC, humidity) {
+  if (tempC > 27 && humidity >= 85) return "High";
+  if (tempC > 24 && humidity >= 80) return "Moderate";
+  return "Low";
+}
+
+/**
+ * Spring Dead Spot risk for Legend Couch.
+ * Infection occurs in autumn as soil temp drops through 21°C (March–April).
+ * Higher risk with thatch >12 mm, late-season N, poor drainage.
+ */
+export function springDeadSpotRisk(soilTempC, month) {
+  // month 0-based; March=2, April=3
+  const isAutumn = month >= 2 && month <= 4;
+  if (isAutumn && soilTempC <= 21 && soilTempC >= 10) return "High";
+  if (isAutumn && soilTempC <= 24) return "Moderate";
+  return "Low";
+}
+
+/**
+ * Legend Couch dormancy status (soil temp at 10 cm).
+ * At Cranbourne: dormant June–Aug (~8–12°C); recovery Sep–Oct.
  */
 export function couchDormancyStatus(soilTempC) {
-  if (soilTempC <  12) return { label: "Dormant",      color: "slate"  };
-  if (soilTempC <  16) return { label: "Transitioning", color: "yellow" };
-  if (soilTempC <  20) return { label: "Slow Growth",  color: "yellow" };
-  return                      { label: "Active",       color: "green"  };
+  if (soilTempC <  10) return { label: "Dormant",       color: "red"    };
+  if (soilTempC <  15) return { label: "Transitioning", color: "orange" };
+  if (soilTempC <  18) return { label: "Slow Growth",   color: "yellow" };
+  return                      { label: "Active",        color: "green"  };
 }
 
 // ── Mock data generator ───────────────────────────────────────────────────────
 
 function getMockData() {
-  // Simulate current season (March = early autumn in Berwick VIC)
+  // Season simulation for Cranbourne VIC
   const month = new Date().getMonth(); // 0-based
-  const isSummer  = month >= 11 || month <= 1;
-  const isWinter  = month >= 5  && month <= 8;
-  const soilTemp  = isSummer ? +(24 + Math.random() * 6).toFixed(1)
-                  : isWinter ? +(11 + Math.random() * 4).toFixed(1)
-                  :            +(17 + Math.random() * 5).toFixed(1);
-  const airTemp   = soilTemp + (Math.random() - 0.4) * 4;
-  const humidity  = +(45 + Math.random() * 40).toFixed(0);
+  const isSummer = month >= 11 || month <= 1;  // Dec–Feb
+  const isAutumn = month >= 2  && month <= 4;  // Mar–May
+  const isWinter = month >= 5  && month <= 7;  // Jun–Aug
 
-  const zones = ZONES.map((z) => {
-    const moisture = +(z.targetMin + Math.random() * (z.targetMax - z.targetMin + 12) - 4).toFixed(1);
-    const { status, color } = moistureStatus(moisture, z);
+  const soilTemp = isSummer ? +(22 + Math.random() * 6).toFixed(1)
+                 : isWinter ? +(9  + Math.random() * 3).toFixed(1)
+                 :             +(16 + Math.random() * 5).toFixed(1);
+  const airTemp  = soilTemp + +(Math.random() * 4 - 1).toFixed(1);
+  const humidity = +(45 + Math.random() * 40).toFixed(0);
+
+  const zones = ZONES.map(z => {
+    const spread  = z.targetMax - z.targetMin;
+    const moisture = +(z.targetMin - 3 + Math.random() * (spread + 8)).toFixed(1);
+    const clamped  = Math.max(6, moisture);
     return {
-      name: z.name,
-      type: z.type,
-      icon: z.icon,
-      moisture: Math.max(5, moisture),
-      targetMin: z.targetMin,
-      targetMax: z.targetMax,
-      status,
-      color,
-      et: +(Math.random() * 0.22 + 0.04).toFixed(2),
-      soilTemp: +(soilTemp + (Math.random() - 0.5) * 2).toFixed(1),
-      lastIrrigated: `${Math.floor(Math.random() * 36) + 1}h ago`,
+      ...moistureStatus(clamped, z),
+      name:         z.name,
+      type:         z.type,
+      moisture:     clamped,
+      targetMin:    z.targetMin,
+      targetMax:    z.targetMax,
+      et:           +(Math.random() * 0.22 + 0.04).toFixed(2),
+      soilTemp:     +(soilTemp + (Math.random() - 0.5) * 1.5).toFixed(1),
+      lastIrrigated:`${Math.floor(Math.random() * 36) + 1}h ago`,
     };
   });
 
@@ -122,29 +175,27 @@ function getMockData() {
   if (nextRun < new Date()) nextRun.setDate(nextRun.getDate() + 1);
 
   const alerts = zones
-    .filter(z => z.status === "Stressed" || z.status === "Critical")
-    .map(z => ({ zone: z.name, message: `${z.status} — moisture ${z.moisture}% VWC`, severity: z.color }));
-
-  // Computed intelligence
-  const bsi    = bentgrassStressIndex(airTemp, humidity);
-  const dsr    = dollarSpotRisk(airTemp, humidity);
-  const couch  = couchDormancyStatus(soilTemp);
+    .filter(z => z.status === "Stressed" || z.status === "Critical" || z.status === "Wilt Risk")
+    .map(z => ({ zone: z.name, message: `${z.status} — VWC ${z.moisture}%`, severity: z.color }));
 
   return {
     zones,
     soilTemp,
-    airTemp: +airTemp.toFixed(1),
-    humidity,
-    bentgrassStressIndex: bsi,
-    dollarSpotRisk: dsr,
-    couchDormancy: couch,
+    airTemp:              +airTemp.toFixed(1),
+    humidity:             +humidity,
+    bentgrassStressIndex: bentgrassStressIndex(airTemp, humidity),
+    dollarSpotRisk:       dollarSpotRisk(airTemp, humidity),
+    brownPatchRisk:       brownPatchRisk(airTemp, humidity),
+    springDeadSpotRisk:   springDeadSpotRisk(soilTemp, month),
+    couchDormancy:        couchDormancyStatus(soilTemp),
     irrigation: {
-      nextRun:          nextRun.toLocaleString([], { hour: "2-digit", minute: "2-digit", weekday: "short" }),
+      nextRun:          nextRun.toLocaleString([], { hour:"2-digit", minute:"2-digit", weekday:"short" }),
       totalZones:       18,
       activeZones:      Math.floor(Math.random() * 3),
       estimatedRuntime: "2h 45m",
     },
     alerts,
+    courseNews: "4th green re-seeded Feb 2026 — expected full play Sep 2026",
   };
 }
 
