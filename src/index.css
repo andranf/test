@@ -12,7 +12,7 @@ body {
 }
 #root { width: 100%; min-height: 100vh; }
 
-/* ── Brand ────────────────────────────────────────────────── */
+/* ── Brand ────────────────────────────────────────────── */
 
 .ranfurlie-bg { background: #030d08; }
 
@@ -23,38 +23,54 @@ body {
   background-clip: text;
 }
 
-/* ── Glass cards ───────────────────────────────────────────── */
+/* ── Glass cards — lighter, more frosted ───────────────── */
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.055);
-  backdrop-filter: blur(22px) saturate(160%);
-  -webkit-backdrop-filter: blur(22px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  border-radius: 20px;
-  transition: background 0.3s, border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.09) 0%,
+    rgba(255, 255, 255, 0.052) 100%
+  );
+  backdrop-filter: blur(36px) saturate(190%) brightness(1.04);
+  -webkit-backdrop-filter: blur(36px) saturate(190%) brightness(1.04);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 22px;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.13),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+  transition: background 0.35s, border-color 0.35s, box-shadow 0.35s, transform 0.35s;
+  will-change: transform;
 }
 .glass-card:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.16);
-  box-shadow: 0 28px 90px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.09);
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.115) 0%,
+    rgba(255, 255, 255, 0.07) 100%
+  );
+  border-color: rgba(255, 255, 255, 0.20);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
   transform: translateY(-2px);
 }
+
 .glass-inner {
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
 /* Coloured accent bar at top of each card */
 .card-accent {
   height: 3px;
-  border-radius: 3px 3px 0 0;
   width: 100%;
-  margin-bottom: 0;
-  border-radius: 20px 20px 0 0;
+  border-radius: 22px 22px 0 0;
 }
 
-/* ── Shimmer ───────────────────────────────────────────────── */
+/* ── Shimmer skeleton ───────────────────────────────────── */
 
 @keyframes shimmer {
   0%   { background-position: -600px 0; }
@@ -62,51 +78,74 @@ body {
 }
 .shimmer-block {
   background: linear-gradient(90deg,
-    rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 100%);
+    rgba(255,255,255,0.04) 0%,
+    rgba(255,255,255,0.08) 50%,
+    rgba(255,255,255,0.04) 100%);
   background-size: 600px 100%;
-  animation: shimmer 1.8s ease-in-out infinite;
+  animation: shimmer 1.6s ease-in-out infinite;
   border-radius: 8px;
 }
 
-/* ── Glowing progress bars ─────────────────────────────────── */
+/* ── Arc / chart entry animation ────────────────────────── */
 
-.bar-green  { background: linear-gradient(90deg, #059669, #34d399); box-shadow: 0 0 10px rgba(52,211,153,0.55); }
-.bar-yellow { background: linear-gradient(90deg, #b45309, #fbbf24); box-shadow: 0 0 10px rgba(251,191,36,0.50); }
-.bar-orange { background: linear-gradient(90deg, #c2410c, #fb923c); box-shadow: 0 0 10px rgba(251,146,60,0.50); }
-.bar-red    { background: linear-gradient(90deg, #991b1b, #f87171); box-shadow: 0 0 10px rgba(248,113,113,0.50); }
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+.anim-in {
+  animation: fadeSlideUp 0.5s ease both;
+}
+
+/* ── Glowing progress bars ──────────────────────────────── */
+
+.bar-green  { background: linear-gradient(90deg, #059669, #34d399); box-shadow: 0 0 10px rgba(52,211,153,0.5); }
+.bar-yellow { background: linear-gradient(90deg, #b45309, #fbbf24); box-shadow: 0 0 10px rgba(251,191,36,0.45); }
+.bar-orange { background: linear-gradient(90deg, #c2410c, #fb923c); box-shadow: 0 0 10px rgba(251,146,60,0.45); }
+.bar-red    { background: linear-gradient(90deg, #991b1b, #f87171); box-shadow: 0 0 10px rgba(248,113,113,0.45); }
 .bar-gray   { background: linear-gradient(90deg, #334155, #64748b); }
 
-/* ── Risk badges ───────────────────────────────────────────── */
+/* ── Risk badges ────────────────────────────────────────── */
 
-.risk-high   { background: rgba(239,68,68,0.12);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.3);  }
+.risk-high   { background: rgba(239,68,68,0.12);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.28);  }
 .risk-mod    { background: rgba(251,191,36,0.10); color: #fcd34d; border: 1px solid rgba(251,191,36,0.25); }
 .risk-low    { background: rgba(52,211,153,0.10); color: #6ee7b7; border: 1px solid rgba(52,211,153,0.22); }
 
-/* ── Turf type chips ───────────────────────────────────────── */
+/* ── Turf type chips ────────────────────────────────────── */
 
 .chip-bentgrass { background: rgba(52,211,153,0.10); color: #6ee7b7; border: 1px solid rgba(52,211,153,0.2); }
 .chip-couch     { background: rgba(212,175,55,0.10); color: #e5c76b; border: 1px solid rgba(212,175,55,0.2); }
 
-/* ── Scrollbar ─────────────────────────────────────────────── */
+/* ── Scrollbar ──────────────────────────────────────────── */
 
-::-webkit-scrollbar              { width: 4px; }
+::-webkit-scrollbar              { width: 3px; }
 ::-webkit-scrollbar-track        { background: transparent; }
-::-webkit-scrollbar-thumb        { background: rgba(255,255,255,0.12); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover  { background: rgba(255,255,255,0.22); }
+::-webkit-scrollbar-thumb        { background: rgba(255,255,255,0.10); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover  { background: rgba(255,255,255,0.18); }
 
-/* ── Tabular numbers ───────────────────────────────────────── */
+/* ── Tabular numbers ────────────────────────────────────── */
 
 .stat-num {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
 
-/* ── Section label ─────────────────────────────────────────── */
+/* ── Section label ──────────────────────────────────────── */
 
 .section-label {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.3);
+  color: rgba(255,255,255,0.28);
+}
+
+/* ── Chart tooltip ──────────────────────────────────────── */
+
+.chart-tooltip {
+  background: rgba(5, 12, 20, 0.94);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 11px;
+  backdrop-filter: blur(16px);
 }
