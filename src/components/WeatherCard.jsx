@@ -49,7 +49,7 @@ export default function WeatherCard({ data, loading }) {
       <div className="flex items-end gap-3">
         <span className="text-5xl font-bold text-slate-800">{data.temperature}°</span>
         <div className="mb-1 text-slate-500 text-sm">
-          <div>Dew: {data.dewPoint}°F</div>
+          <div>Dew: {data.dewPoint}°C</div>
           <div>Solar: {data.solarRadiation} W/m²</div>
         </div>
       </div>
@@ -57,8 +57,8 @@ export default function WeatherCard({ data, loading }) {
       {/* Stats grid */}
       <div className="grid grid-cols-3 gap-2">
         <Stat label="Humidity" value={data.humidity} unit="%" icon={<Droplets size={16} />} />
-        <Stat label="Wind" value={`${data.windSpeed} ${data.windDirection}`} unit="mph" icon={<Wind size={16} />} />
-        <Stat label="Rainfall" value={data.rainfall} unit="in" icon={<CloudRain size={16} />} />
+        <Stat label="Wind" value={`${data.windSpeed} ${data.windDirection}`} unit="km/h" icon={<Wind size={16} />} />
+        <Stat label="Rainfall" value={data.rainfall} unit="mm" icon={<CloudRain size={16} />} />
       </div>
 
       {/* 3-day forecast */}

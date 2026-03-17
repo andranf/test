@@ -20,10 +20,10 @@ async function fetchLive() {
 const METRICS = [
   {
     name: "Green Speed (Stimp)",
-    unit: "ft",
-    target: 10.5,
-    min: 9.5,
-    max: 11.5,
+    unit: "m",
+    target: 3.2,
+    min: 2.9,
+    max: 3.5,
   },
   {
     name: "Firmness",
@@ -69,7 +69,7 @@ function getMockData() {
     d.setDate(d.getDate() - (13 - i));
     return {
       date: d.toLocaleDateString([], { month: "short", day: "numeric" }),
-      stimp: +(10.5 + (Math.random() - 0.5) * 1.5).toFixed(1),
+      stimp: +(3.2 + (Math.random() - 0.5) * 0.45).toFixed(2),
       firmness: +(75 + (Math.random() - 0.5) * 20).toFixed(0),
     };
   });

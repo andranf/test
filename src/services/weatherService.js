@@ -37,7 +37,7 @@ async function fetchForecast(lat, lng) {
     `https://api.open-meteo.com/v1/forecast` +
     `?latitude=${lat}&longitude=${lng}` +
     `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weathercode` +
-    `&temperature_unit=fahrenheit&timezone=auto&forecast_days=4`;
+    `&temperature_unit=celsius&wind_speed_unit=kmh&precipitation_unit=mm&timezone=auto&forecast_days=4`;
 
   const res = await fetch(url);
   if (!res.ok) return [];
@@ -136,20 +136,20 @@ function getMockData() {
   const hour = new Date().getHours();
   const isMorning = hour < 10;
   return {
-    temperature:    randomVariation(isMorning ? 58 : 72, 3),
+    temperature:    randomVariation(isMorning ? 14 : 22, 2),
     humidity:       randomVariation(isMorning ? 82 : 55, 5),
-    windSpeed:      randomVariation(8, 4),
+    windSpeed:      randomVariation(13, 6),
     windDirection:  "SW",
-    rainfall:       randomVariation(0.12, 0.05),
-    dewPoint:       randomVariation(48, 3),
+    rainfall:       randomVariation(3.0, 1.2),
+    dewPoint:       randomVariation(isMorning ? 9 : 13, 2),
     solarRadiation: randomVariation(isMorning ? 320 : 650, 50),
     stationName:    "Station 1 - Clubhouse",
     lastUpdated:    new Date().toLocaleTimeString(),
     conditions:     isMorning ? "Partly Cloudy" : "Mostly Sunny",
     forecast: [
-      { day: "Tomorrow", high: 75, low: 55, rain: "10%", icon: "sun" },
-      { day: "Wed",      high: 68, low: 52, rain: "30%", icon: "cloud" },
-      { day: "Thu",      high: 63, low: 50, rain: "60%", icon: "rain" },
+      { day: "Tomorrow", high: 24, low: 13, rain: "10%", icon: "sun" },
+      { day: "Wed",      high: 20, low: 11, rain: "30%", icon: "cloud" },
+      { day: "Thu",      high: 17, low: 10, rain: "60%", icon: "rain" },
     ],
   };
 }
