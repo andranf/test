@@ -74,6 +74,30 @@ function moistureStatus(vwc, zone) {
  * Research: root growth ceases >25°C soil; shoot ceases >32°C.
  * Nighttime lows >21°C air are the most reliable early indicator.
  */
+/**
+ * Turfgrass Growth Potential (GP) — PACE Turf / Gaussian model.
+ *
+ * GP = exp(-0.5 × ((T - T_opt) / σ)²)  → returns 0–100
+ *
+ * C3 cool-season (bentgrass, ryegrass, poa):
+ *   T_opt = 20°C, σ = 5.5°C  → peak growth 15–24°C
+ * C4 warm-season (couch/bermuda):
+ *   T_opt = 31°C, σ = 7.5°C  → peak growth 26–35°C
+ *
+ * Use average air temperature (mean of max/min) for daily GP,
+ * or current air temp for a real-time estimate.
+ */
+export function growthPotential(tempC) {
+  const c3 = Math.round(Math.exp(-0.5 * Math.pow((tempC - 20) / 5.5, 2)) * 100);
+  const c4 = Math.round(Math.exp(-0.5 * Math.pow((tempC - 31) / 7.5, 2)) * 100);
+  return {
+    c3,  // bentgrass / poa / ryegrass
+    c4,  // couch / bermuda / kikuyu
+    c3Label: c3 >= 75 ? "High" : c3 >= 40 ? "Moderate" : "Low",
+    c4Label: c4 >= 75 ? "High" : c4 >= 40 ? "Moderate" : "Low",
+  };
+}
+
 export function bentgrassStressIndex(tempC, humidity) {
   let stress = 0;
   // Temperature stress — soil temps estimated roughly 1–3°C below air

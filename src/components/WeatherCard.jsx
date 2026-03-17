@@ -1,6 +1,6 @@
 import { Wind, Droplets, CloudRain, Sun, Cloud, Thermometer } from "lucide-react";
 import AnimatedNumber from "./ui/AnimatedNumber";
-import { bentgrassStressIndex, dollarSpotRisk, brownPatchRisk, couchDormancyStatus } from "../services/greenkeeperService";
+import { bentgrassStressIndex, dollarSpotRisk, brownPatchRisk, couchDormancyStatus, growthPotential } from "../services/greenkeeperService";
 
 // ── Weather icons ─────────────────────────────────────────────────────────────
 
@@ -98,14 +98,18 @@ function Skeleton() {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function WeatherCard({ data, loading }) {
+export default function WeatherCard({ data, loading, disease }) {
   if (loading || !data) return <Skeleton />;
 
   const temp = data.temperature ?? 0;
   const hum  = data.humidity    ?? 0;
   const bsi      = bentgrassStressIndex(temp, hum);
-  const dsr      = dollarSpotRisk(temp, hum);
-  const bpr      = brownPatchRisk(temp, hum);
+  // Use live disease model data if available, otherwise fall back to calculated
+  const dsModel  = disease?.models?.find(m => m.key === "dollarSpot");
+  const bpModel  = disease?.models?.find(m => m.key === "brownPatch");
+  const pyModel  = disease?.models?.find(m => m.key === "pythiumBlight");
+  const dsr      = dsModel?.risk ?? dollarSpotRisk(temp, hum);
+  const bpr      = bpModel?.risk ?? brownPatchRisk(temp, hum);
   // Soil temp estimated ~2°C below air (conservative for Cranbourne sandy loam)
   const soilEst  = temp - 2;
   const dormancy = couchDormancyStatus(soilEst);
@@ -157,8 +161,18 @@ export default function WeatherCard({ data, loading }) {
             <div className="text-sm" style={{ color:"rgba(255,255,255,0.38)" }}>
               Solar <span style={{ color:"rgba(255,255,255,0.7)" }}>{data.solarRadiation} W/m²</span>
             </div>
+            {data.et != null && (
+              <div className="text-sm" style={{ color:"rgba(255,255,255,0.38)" }}>
+                ET <span style={{ color:"rgba(255,255,255,0.7)" }}>{data.et} mm</span>
+              </div>
+            )}
+            {data.leafWetness != null && (
+              <div className="text-sm" style={{ color:"rgba(255,255,255,0.38)" }}>
+                Leaf wet <span style={{ color: data.leafWetness > 1 ? "#60a5fa" : "rgba(255,255,255,0.7)" }}>{data.leafWetness} hr</span>
+              </div>
+            )}
             <div className="text-xs font-semibold px-2.5 py-1 rounded-full w-fit"
-              style={{ background: "rgba(255,255,255,0.06)", color: bsiColor, border:`1px solid ${bsiColor}44` }}>
+              style={{ background:"rgba(255,255,255,0.06)", color:bsiColor, border:`1px solid ${bsiColor}44` }}>
               BSI {bsi}/100
             </div>
           </div>
@@ -195,6 +209,38 @@ export default function WeatherCard({ data, loading }) {
             Bentgrass BSI: {bsi < 30 ? "Low" : bsi < 60 ? "Moderate" : "High"}
           </span>
         </div>
+
+        {/* Growth Potential */}
+        {(() => {
+          const gp = growthPotential(temp);
+          const gpColor = (v) => v >= 75 ? "#34d399" : v >= 40 ? "#fbbf24" : "#f87171";
+          return (
+            <div className="rounded-xl p-3 flex flex-col gap-2"
+              style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)" }}>
+              <p className="section-label">Growth Potential</p>
+              <div className="flex items-center gap-3">
+                <div className="text-xs w-28 flex-shrink-0" style={{ color:"rgba(255,255,255,0.45)" }}>C3 Bentgrass</div>
+                <div className="flex-1 relative h-2 rounded-full overflow-hidden" style={{ background:"rgba(255,255,255,0.07)" }}>
+                  <div className="absolute h-2 rounded-full transition-all duration-700"
+                    style={{ width:`${gp.c3}%`, background: gpColor(gp.c3), boxShadow:`0 0 6px ${gpColor(gp.c3)}88` }} />
+                </div>
+                <div className="text-xs font-bold w-20 text-right" style={{ color: gpColor(gp.c3) }}>
+                  {gp.c3}% <span className="font-normal" style={{ color:"rgba(255,255,255,0.35)" }}>{gp.c3Label}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-xs w-28 flex-shrink-0" style={{ color:"rgba(255,255,255,0.45)" }}>C4 Couch</div>
+                <div className="flex-1 relative h-2 rounded-full overflow-hidden" style={{ background:"rgba(255,255,255,0.07)" }}>
+                  <div className="absolute h-2 rounded-full transition-all duration-700"
+                    style={{ width:`${gp.c4}%`, background: gpColor(gp.c4), boxShadow:`0 0 6px ${gpColor(gp.c4)}88` }} />
+                </div>
+                <div className="text-xs font-bold w-20 text-right" style={{ color: gpColor(gp.c4) }}>
+                  {gp.c4}% <span className="font-normal" style={{ color:"rgba(255,255,255,0.35)" }}>{gp.c4Label}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* 3-day forecast */}
         {data.forecast?.length > 0 && (

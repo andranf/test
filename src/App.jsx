@@ -8,11 +8,14 @@ import WeatherCard      from "./components/WeatherCard";
 import GreenkeeperCard  from "./components/GreenkeeperCard";
 import USGACard         from "./components/USGACard";
 import JobsCard         from "./components/JobsCard";
+import TDRCard          from "./components/TDRCard";
 import StatusBar        from "./components/StatusBar";
 import { fetchWeather }     from "./services/weatherService";
 import { fetchGreenkeeper } from "./services/greenkeeperService";
 import { fetchUSGA }        from "./services/usgaService";
 import { fetchJobs }        from "./services/jobsService";
+import { fetchTDR }         from "./services/tdrService";
+import { fetchDisease }     from "./services/diseaseService";
 
 const REFRESH_INTERVAL = 120;
 
@@ -21,6 +24,8 @@ function useDataFetch() {
   const [greenkeeper, setGreenkeeper] = useState(null);
   const [usga,        setUSGA]        = useState(null);
   const [jobs,        setJobs]        = useState(null);
+  const [tdr,         setTDR]         = useState(null);
+  const [disease,     setDisease]     = useState(null);
   const [errors,      setErrors]      = useState({});
   const [loading,     setLoading]     = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState(null);
@@ -31,13 +36,15 @@ function useDataFetch() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     const results = await Promise.allSettled([
-      fetchWeather(), fetchGreenkeeper(), fetchUSGA(), fetchJobs(),
+      fetchWeather(), fetchGreenkeeper(), fetchUSGA(), fetchJobs(), fetchTDR(), fetchDisease(),
     ]);
     const e = {};
     if (results[0].status === "fulfilled") setWeather(results[0].value);     else e.weather     = results[0].reason?.message;
     if (results[1].status === "fulfilled") setGreenkeeper(results[1].value); else e.greenkeeper = results[1].reason?.message;
     if (results[2].status === "fulfilled") setUSGA(results[2].value);        else e.usga        = results[2].reason?.message;
     if (results[3].status === "fulfilled") setJobs(results[3].value);        else e.jobs        = results[3].reason?.message;
+    if (results[4].status === "fulfilled") setTDR(results[4].value);         else e.tdr         = results[4].reason?.message;
+    if (results[5].status === "fulfilled") setDisease(results[5].value);     else e.disease     = results[5].reason?.message;
     setErrors(e);
     setLoading(false);
     setLastRefreshed(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
@@ -54,7 +61,7 @@ function useDataFetch() {
     return () => clearInterval(countdownRef.current);
   }, []);
 
-  return { weather, greenkeeper, usga, jobs, errors, loading, lastRefreshed, countdown, refresh: fetchAll };
+  return { weather, greenkeeper, usga, jobs, tdr, disease, errors, loading, lastRefreshed, countdown, refresh: fetchAll };
 }
 
 // Derive an overall course health % from greenkeeper zones
@@ -72,13 +79,15 @@ function healthColor(pct) {
 }
 
 export default function App() {
-  const { weather, greenkeeper, usga, jobs, errors, loading, lastRefreshed, countdown, refresh } = useDataFetch();
+  const { weather, greenkeeper, usga, jobs, tdr, disease, errors, loading, lastRefreshed, countdown, refresh } = useDataFetch();
 
   const sources = [
-    { label: "Weather",      ok: !errors.weather      },
+    { label: "Weather",      ok: !errors.weather,  battery: weather?.battery,  signal: weather?.signal  },
     { label: "Greenkeeper",  ok: !errors.greenkeeper  },
     { label: "USGA Deacon",  ok: !errors.usga         },
     { label: "Task Tracker", ok: !errors.jobs         },
+    { label: "TDR 350",      ok: !errors.tdr          },
+    { label: "Disease",      ok: !errors.disease      },
   ];
 
   const today  = new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
@@ -157,7 +166,7 @@ export default function App() {
                       <div>
                         <p className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>Stimp</p>
                         <p className="text-xl font-bold text-white stat-num">
-                          <AnimatedNumber value={stimp} decimals={1} /> m
+                          <AnimatedNumber value={stimp} decimals={1} /> ft
                         </p>
                       </div>
                     )}
@@ -204,10 +213,11 @@ export default function App() {
           {/* Card grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {[
-              <WeatherCard     data={weather}     loading={loading} />,
+              <WeatherCard     data={weather}     loading={loading} disease={disease} />,
               <GreenkeeperCard data={greenkeeper} loading={loading} />,
               <USGACard        data={usga}        loading={loading} />,
               <JobsCard        data={jobs}        loading={loading} />,
+              <TDRCard         data={tdr}         loading={loading} />,
             ].map((card, i) => (
               <motion.div key={i}
                 initial={{ opacity: 0, y: 36, scale: 0.97 }}

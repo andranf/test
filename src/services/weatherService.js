@@ -1,25 +1,39 @@
 /**
- * Spectrum Connect Weather Station Service + Open-Meteo Forecast
+ * SpecConnect Weather Station Service + Open-Meteo Forecast
  *
- * Live sensor data: Spectrum Connect REST API (api.specconnect.net)
- * 3-day forecast:   Open-Meteo (open-meteo.com) — free, no key required
+ * Endpoints used:
+ *   GetCustomerEquipment          — auto-discover all device serials
+ *   GetCurrentConditionsForEquipment — live sensor readings
+ *   GetDataInDateTimeRange        — 14-day history for trend chart
+ *   GetBatteryLevels              — station battery health
+ *   GetSignalStrength             — station cellular/WiFi signal
+ *   GetWindLogData                — high-frequency wind log
  *
- * Set MOCK_MODE = true to use generated data instead (e.g. for local dev).
- *
- * COURSE_LAT / COURSE_LNG: update these to your course's coordinates.
- * The app will try to read lat/lon from the Spectrum station record first;
- * these values are used as the fallback for the forecast call.
+ * Forecast: Open-Meteo (open-meteo.com) — free, no key required.
  */
 
-const MOCK_MODE = false;
-const BASE_URL = "https://api.specconnect.net:6703/api";
-const API_KEY = "bf4854edebefaaa9964c765ab3f0cf09";
+const MOCK_MODE  = false;
+const BASE_URL   = "https://api.specconnect.net:6703/api";
+const API_KEY    = "bf4854edebefaaa9964c765ab3f0cf09";
 
 // Ranfurlie Golf Club — Cranbourne West, Victoria
 const COURSE_LAT = -38.1208;
-const COURSE_LNG = 145.2481;
+const COURSE_LNG =  145.2481;
 
-// ── Open-Meteo forecast ───────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function q(params) {
+  return Object.entries(params)
+    .filter(([, v]) => v != null)
+    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+    .join("&");
+}
+
+function isoDate(d) {
+  return d.toISOString().slice(0, 19);
+}
+
+// ── Open-Meteo 3-day forecast ─────────────────────────────────────────────────
 
 const WMO_ICONS = {
   0: "sun", 1: "sun", 2: "cloud", 3: "cloud",
@@ -37,130 +51,216 @@ async function fetchForecast(lat, lng) {
     `?latitude=${lat}&longitude=${lng}` +
     `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weathercode` +
     `&temperature_unit=celsius&wind_speed_unit=kmh&precipitation_unit=mm&timezone=auto&forecast_days=4`;
-
   const res = await fetch(url);
   if (!res.ok) return [];
-  const data = await res.json();
-  const { daily } = data;
-
+  const { daily } = await res.json();
   return daily.time.slice(1, 4).map((dateStr, i) => {
     const d = new Date(dateStr + "T12:00:00");
-    const label = i === 0 ? "Tomorrow"
-      : d.toLocaleDateString([], { weekday: "short" });
     return {
-      day: label,
+      day:  i === 0 ? "Tomorrow" : d.toLocaleDateString([], { weekday: "short" }),
       high: Math.round(daily.temperature_2m_max[i + 1]),
-      low: Math.round(daily.temperature_2m_min[i + 1]),
+      low:  Math.round(daily.temperature_2m_min[i + 1]),
       rain: `${daily.precipitation_probability_max[i + 1]}%`,
       icon: WMO_ICONS[daily.weathercode[i + 1]] ?? "cloud",
     };
   });
 }
 
-// ── Spectrum Connect sensor data ──────────────────────────────────────────────
+// ── SpecConnect response parser ───────────────────────────────────────────────
+// GetCurrentConditionsForEquipment returns either a flat object of named fields
+// or an array of {ChannelName, Value} channel records. Handle both.
 
-function randomVariation(base, range) {
-  return +(base + (Math.random() - 0.5) * range * 2).toFixed(1);
+function extractChannels(payload) {
+  if (!payload) return {};
+  // Channel array format: [{ChannelName:"AirTemperature", Value:22.5}, ...]
+  if (Array.isArray(payload)) {
+    return Object.fromEntries(payload.map(c => [
+      c.ChannelName ?? c.Name ?? c.Key,
+      c.Value ?? c.value,
+    ]));
+  }
+  // Flat object: {AirTemperature:22.5, ...} or nested {Data:[...]}
+  if (payload.Data)    return extractChannels(payload.Data);
+  if (payload.Sensors) return extractChannels(payload.Sensors);
+  return payload;
 }
 
-function mapReading(station, reading, forecast) {
-  // SpecConnect returns metric values for AU accounts.
-  // The reading object may be a flat object or have a nested .Value property per field.
-  const get = (key) => reading?.[key]?.Value ?? reading?.[key] ?? null;
+function getField(channels, ...keys) {
+  for (const k of keys) {
+    const v = channels[k] ?? channels[k.toLowerCase()] ?? channels[k.toUpperCase()];
+    if (v != null && v !== "") return +v;
+  }
+  return null;
+}
 
-  const temperature  = get("AirTemperature") ?? get("Temperature");
-  const windSpeed    = get("WindSpeed");
-  const windDir      = get("WindDirection");
-  const humidity     = get("RelativeHumidity") ?? get("Humidity");
-  const rainfall     = get("Precipitation")    ?? get("Rainfall") ?? get("Rain");
-  const dewPoint     = get("DewPoint");
-  const solarRad     = get("SolarRadiation")   ?? get("Solar");
+function mapReading(device, payload, forecast, history, battery, signal) {
+  const ch = extractChannels(payload);
+
+  const temperature  = getField(ch, "AirTemperature", "Temperature", "Temp", "TempC");
+  const windSpeed    = getField(ch, "WindSpeed", "Wind", "WindSpeedKMH");
+  const windDir      = ch.WindDirection ?? ch.WindDir ?? ch.WindDirectionDegrees ?? "—";
+  const humidity     = getField(ch, "RelativeHumidity", "Humidity", "RH");
+  const rainfall     = getField(ch, "Precipitation", "Rainfall", "Rain", "RainMM");
+  const dewPoint     = getField(ch, "DewPoint", "DewPointC");
+  const solarRad     = getField(ch, "SolarRadiation", "Solar", "SolarRad");
+  const et           = getField(ch, "ET", "EvapoTranspiration", "EvapotranspirationMM");
+  const pressure     = getField(ch, "BarometricPressure", "Pressure", "BaroPressure");
+  const leafWetness  = getField(ch, "LeafWetness", "Wetness");
+
+  // Derive a compass string if wind direction is numeric degrees
+  const windDirStr = typeof windDir === "number" || (typeof windDir === "string" && !isNaN(+windDir))
+    ? degreesToCompass(+windDir)
+    : String(windDir);
 
   let conditions = "Clear";
-  if (rainfall  > 2.5)   conditions = "Rainy";
-  else if (humidity > 85) conditions = "Humid / Overcast";
-  else if (solarRad != null && solarRad < 200) conditions = "Partly Cloudy";
-  else                    conditions = "Mostly Sunny";
+  if (rainfall != null && rainfall > 2.5)         conditions = "Rainy";
+  else if (humidity != null && humidity > 85)      conditions = "Humid / Overcast";
+  else if (solarRad != null && solarRad < 200)     conditions = "Partly Cloudy";
+  else if (solarRad != null && solarRad >= 200)    conditions = "Mostly Sunny";
 
   return {
-    temperature:    temperature != null ? +Number(temperature).toFixed(1) : null,
-    humidity:       humidity    != null ? +Number(humidity).toFixed(1)    : null,
-    windSpeed:      windSpeed   != null ? +Number(windSpeed).toFixed(1)   : null,
-    windDirection:  windDir ?? "—",
-    rainfall:       rainfall    != null ? +Number(rainfall).toFixed(1)    : null,
-    dewPoint:       dewPoint    != null ? +Number(dewPoint).toFixed(1)    : null,
-    solarRadiation: solarRad    != null ? +Number(solarRad).toFixed(0)    : null,
-    stationName:    station.StationName ?? station.Name ?? "Weather Station",
+    temperature:    temperature != null ? +temperature.toFixed(1) : null,
+    humidity:       humidity    != null ? +humidity.toFixed(1)    : null,
+    windSpeed:      windSpeed   != null ? +windSpeed.toFixed(1)   : null,
+    windDirection:  windDirStr,
+    rainfall:       rainfall    != null ? +rainfall.toFixed(1)    : null,
+    dewPoint:       dewPoint    != null ? +dewPoint.toFixed(1)    : null,
+    solarRadiation: solarRad    != null ? +solarRad.toFixed(0)    : null,
+    et:             et          != null ? +et.toFixed(1)          : null,
+    pressure:       pressure    != null ? +pressure.toFixed(1)    : null,
+    leafWetness:    leafWetness != null ? +leafWetness.toFixed(1) : null,
+    stationName:    device.Name ?? device.StationName ?? device.DeviceType ?? "Weather Station",
     lastUpdated:    new Date().toLocaleTimeString(),
     conditions,
     forecast,
+    history,   // 14-day [{date, temp, rainfall, solar}]
+    battery,   // 0–100 or null
+    signal,    // dBm / % or null
   };
 }
 
+function degreesToCompass(deg) {
+  const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+  return dirs[Math.round(deg / 22.5) % 16];
+}
+
+// ── History parser (GetDataInDateTimeRange) ───────────────────────────────────
+
+function mapHistory(rows) {
+  if (!Array.isArray(rows)) return [];
+  return rows.map(row => {
+    const ch   = extractChannels(row);
+    const temp = getField(ch, "AirTemperature", "Temperature", "Temp");
+    const rain = getField(ch, "Precipitation", "Rainfall", "Rain");
+    const sol  = getField(ch, "SolarRadiation", "Solar");
+    const rawDate = row.Date ?? row.ReadingDate ?? row.DateTime ?? row.Timestamp;
+    const date = rawDate
+      ? new Date(rawDate).toLocaleDateString([], { month: "short", day: "numeric" })
+      : "—";
+    return { date, temp, rainfall: rain, solar: sol };
+  });
+}
+
+// ── Live fetch ────────────────────────────────────────────────────────────────
+
 async function fetchLive() {
-  // 1. Station list
-  const stationsRes = await fetch(
-    `${BASE_URL}/Customer/GetStations?customerApiKey=${API_KEY}`
-  );
-  if (!stationsRes.ok) throw new Error(`Spectrum API error: ${stationsRes.status}`);
-  const stations = await stationsRes.json();
-  if (!stations?.length) throw new Error("No Spectrum stations found for this account");
+  // 1. Discover all devices — find the weather station serial automatically
+  const equipRes = await fetch(`${BASE_URL}/Customer/GetCustomerEquipment?customerApiKey=${API_KEY}`);
+  if (!equipRes.ok) throw new Error(`GetCustomerEquipment: ${equipRes.status}`);
+  const equipment = await equipRes.json();
 
-  const station   = stations[0];
-  const stationId = station.StationId ?? station.StationID ?? station.ID ?? station.Id;
-  const lat       = station.Latitude  ?? station.lat ?? COURSE_LAT;
-  const lng       = station.Longitude ?? station.lon ?? COURSE_LNG;
+  const devices = Array.isArray(equipment) ? equipment : (equipment.Equipment ?? equipment.Devices ?? [equipment]);
+  // Exclude FieldScout/TDR devices — they're handled by tdrService
+  const weatherDevice = devices.find(e => {
+    const type = String(e.DeviceType ?? e.Type ?? e.Model ?? "").toLowerCase();
+    return !type.includes("tdr") && !type.includes("fieldscout") && !type.includes("trufirm");
+  }) ?? devices[0];
 
-  // 2. Fetch current sensor reading + forecast in parallel.
-  //    Try GetCurrentData first (real-time); fall back to GetHourlyData if 404.
-  const [dataRes, forecast] = await Promise.all([
-    fetch(`${BASE_URL}/Customer/GetCurrentData?customerApiKey=${API_KEY}&stationId=${stationId}`),
+  if (!weatherDevice) throw new Error("No weather station found in GetCustomerEquipment");
+
+  const serial = weatherDevice.SerialNumber ?? weatherDevice.Serial ?? weatherDevice.serialNumber;
+  const lat    = weatherDevice.Latitude  ?? weatherDevice.lat ?? COURSE_LAT;
+  const lng    = weatherDevice.Longitude ?? weatherDevice.lon ?? COURSE_LNG;
+
+  // 2. Parallel: current readings, 14-day history, battery, signal, forecast
+  const now         = new Date();
+  const fourteenAgo = new Date(now - 14 * 24 * 60 * 60 * 1000);
+
+  const [currentRes, historyRes, batteryRes, signalRes, forecast] = await Promise.allSettled([
+    fetch(`${BASE_URL}/Customer/GetCurrentConditionsForEquipment?${q({ customerApiKey: API_KEY, serialNumber: serial })}`),
+    fetch(`${BASE_URL}/Customer/GetDataInDateTimeRange?${q({ customerApiKey: API_KEY, serialNumber: serial, startDate: isoDate(fourteenAgo), endDate: isoDate(now) })}`),
+    fetch(`${BASE_URL}/Customer/GetBatteryLevels?${q({ customerApiKey: API_KEY, serialNumber: serial })}`),
+    fetch(`${BASE_URL}/Customer/GetSignalStrength?${q({ customerApiKey: API_KEY, serialNumber: serial })}`),
     fetchForecast(lat, lng),
   ]);
 
-  let reading;
-  if (dataRes.ok) {
-    reading = await dataRes.json();
-  } else if (dataRes.status === 404) {
-    // Endpoint not available — fall back to most recent hourly record
-    const now = new Date();
-    const twoHoursAgo = new Date(now - 2 * 60 * 60 * 1000);
-    const fmt = (d) => d.toISOString().slice(0, 19);
-    const hourlyRes = await fetch(
-      `${BASE_URL}/Customer/GetHourlyData?customerApiKey=${API_KEY}` +
-      `&stationId=${stationId}&startDate=${fmt(twoHoursAgo)}&endDate=${fmt(now)}`
-    );
-    if (!hourlyRes.ok) throw new Error(`Spectrum data error: ${hourlyRes.status}`);
-    const rows = await hourlyRes.json();
-    reading = Array.isArray(rows) ? rows[rows.length - 1] : rows;
-  } else {
-    throw new Error(`Spectrum data error: ${dataRes.status}`);
+  if (currentRes.status !== "fulfilled" || !currentRes.value.ok)
+    throw new Error(`GetCurrentConditionsForEquipment: ${currentRes.value?.status ?? currentRes.reason}`);
+
+  const reading = await currentRes.value.json();
+
+  const history = (historyRes.status === "fulfilled" && historyRes.value.ok)
+    ? mapHistory(await historyRes.value.json())
+    : [];
+
+  let battery = null;
+  if (batteryRes.status === "fulfilled" && batteryRes.value.ok) {
+    const b = await batteryRes.value.json();
+    battery = b.BatteryLevel ?? b.Level ?? b.Percent ?? b.Value ?? (typeof b === "number" ? b : null);
   }
 
-  return mapReading(station, reading, forecast);
+  let signal = null;
+  if (signalRes.status === "fulfilled" && signalRes.value.ok) {
+    const s = await signalRes.value.json();
+    signal = s.SignalStrength ?? s.Strength ?? s.Level ?? s.Value ?? s.Rssi ?? (typeof s === "number" ? s : null);
+  }
+
+  const forecastData = forecast.status === "fulfilled" ? forecast.value : [];
+
+  return mapReading(weatherDevice, reading, forecastData, history, battery, signal);
 }
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 
+function getMockHistory() {
+  return Array.from({ length: 14 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (13 - i));
+    const isRainDay = i === 1 || i === 12; // simulate two rain events
+    return {
+      date:     d.toLocaleDateString([], { month: "short", day: "numeric" }),
+      temp:     +(28 - i * 0.5 + (Math.random() - 0.5) * 3).toFixed(1),
+      rainfall: isRainDay ? +(8 + Math.random() * 18).toFixed(1) : +(Math.random() * 0.5).toFixed(1),
+      solar:    +(550 + (Math.random() - 0.5) * 200).toFixed(0),
+    };
+  });
+}
+
 function getMockData() {
   const hour = new Date().getHours();
-  const isMorning = hour < 10;
+  const am   = hour < 10;
   return {
-    temperature:    randomVariation(isMorning ? 14 : 22, 2),
-    humidity:       randomVariation(isMorning ? 82 : 55, 5),
-    windSpeed:      randomVariation(13, 6),
+    temperature:    am ? 14.2 : 21.8,
+    humidity:       am ? 82   : 56,
+    windSpeed:      13.4,
     windDirection:  "SW",
-    rainfall:       randomVariation(3.0, 1.2),
-    dewPoint:       randomVariation(isMorning ? 9 : 13, 2),
-    solarRadiation: randomVariation(isMorning ? 320 : 650, 50),
-    stationName:    "Station 1 - Clubhouse",
+    rainfall:       0.0,
+    dewPoint:       am ? 9.1  : 13.4,
+    solarRadiation: am ? 320  : 648,
+    et:             3.8,
+    pressure:       1013.4,
+    leafWetness:    am ? 2.1  : 0.0,
+    stationName:    "WatchDog 2000 — Ranfurlie",
     lastUpdated:    new Date().toLocaleTimeString(),
-    conditions:     isMorning ? "Partly Cloudy" : "Mostly Sunny",
+    conditions:     am ? "Partly Cloudy" : "Mostly Sunny",
     forecast: [
-      { day: "Tomorrow", high: 24, low: 13, rain: "10%", icon: "sun" },
+      { day: "Tomorrow", high: 24, low: 13, rain: "10%", icon: "sun"   },
       { day: "Wed",      high: 20, low: 11, rain: "30%", icon: "cloud" },
-      { day: "Thu",      high: 17, low: 10, rain: "60%", icon: "rain" },
+      { day: "Thu",      high: 17, low: 10, rain: "60%", icon: "rain"  },
     ],
+    history:  getMockHistory(),
+    battery:  78,
+    signal:   -72,
   };
 }
 
@@ -171,15 +271,8 @@ export async function fetchWeather() {
   try {
     return await fetchLive();
   } catch (err) {
-    console.warn("Spectrum live fetch failed, falling back to mock:", err.message);
-    // Still try to attach a real forecast even in fallback mode
+    console.warn("SpecConnect live fetch failed, falling back to mock:", err.message);
     const forecast = await fetchForecast(COURSE_LAT, COURSE_LNG).catch(() => []);
     return { ...getMockData(), stationName: "⚠ Live sensor unavailable", forecast };
   }
-}
-
-export async function fetchStations() {
-  const res = await fetch(`${BASE_URL}/Customer/GetStations?customerApiKey=${API_KEY}`);
-  if (!res.ok) throw new Error(`Spectrum API error: ${res.status}`);
-  return res.json();
 }
