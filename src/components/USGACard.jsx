@@ -1,35 +1,45 @@
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { ClipboardCheck, TrendingUp, AlertCircle } from "lucide-react";
 
-const statusConfig = {
-  "on-target": { bg: "bg-emerald-100", text: "text-emerald-700", label: "On Target", bar: "bg-emerald-500" },
-  "in-range": { bg: "bg-sky-100", text: "text-sky-700", label: "In Range", bar: "bg-sky-500" },
-  "out-of-range": { bg: "bg-red-100", text: "text-red-700", label: "Out of Range", bar: "bg-red-500" },
+const STATUS = {
+  "on-target":    { bg: "rgba(16,185,129,0.1)",  text: "#6ee7b7", border: "rgba(16,185,129,0.22)",  bar: "#34d399", label: "On Target"    },
+  "in-range":     { bg: "rgba(56,189,248,0.1)",  text: "#7dd3fc", border: "rgba(56,189,248,0.22)",  bar: "#38bdf8", label: "In Range"     },
+  "out-of-range": { bg: "rgba(239,68,68,0.1)",   text: "#fca5a5", border: "rgba(239,68,68,0.22)",   bar: "#f87171", label: "Out of Range" },
 };
 
 function MetricRow({ metric }) {
-  const cfg = statusConfig[metric.status] || statusConfig["in-range"];
-  const pct = Math.min(100, Math.max(0, ((metric.value - metric.min) / (metric.max - metric.min)) * 100));
-  const targetPct = ((metric.target - metric.min) / (metric.max - metric.min)) * 100;
+  const cfg = STATUS[metric.status] || STATUS["in-range"];
+  const range = metric.max - metric.min;
+  const pct = Math.min(100, Math.max(0, ((metric.value - metric.min) / range) * 100));
+  const targetPct = ((metric.target - metric.min) / range) * 100;
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between text-sm">
-        <span className="font-medium text-slate-700 w-40">{metric.name}</span>
-        <span className="font-semibold text-slate-800">{metric.value} <span className="text-xs text-slate-400">{metric.unit}</span></span>
-        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.text}`}>{cfg.label}</span>
+        <span className="font-medium w-44" style={{ color: "rgba(255,255,255,0.8)" }}>{metric.name}</span>
+        <span className="font-bold stat-num text-white">
+          {metric.value} <span className="text-xs font-normal" style={{ color: "rgba(255,255,255,0.35)" }}>{metric.unit}</span>
+        </span>
+        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
+          style={{ background: cfg.bg, color: cfg.text, border: `1px solid ${cfg.border}` }}>
+          {cfg.label}
+        </span>
       </div>
       {/* Range bar */}
-      <div className="relative h-2 bg-slate-100 rounded-full overflow-visible">
-        <div className={`absolute h-2 rounded-full ${cfg.bar} opacity-70`} style={{ width: `${pct}%` }} />
+      <div className="relative h-1.5 rounded-full overflow-visible"
+        style={{ background: "rgba(255,255,255,0.07)" }}>
+        <div
+          className="absolute h-1.5 rounded-full transition-all duration-700"
+          style={{ width: `${pct}%`, background: cfg.bar, boxShadow: `0 0 8px ${cfg.bar}60` }}
+        />
         {/* Target marker */}
         <div
-          className="absolute top-[-2px] w-0.5 h-3 bg-slate-400 rounded-full"
-          style={{ left: `${targetPct}%` }}
+          className="absolute top-[-3px] w-0.5 h-[18px] rounded-full"
+          style={{ left: `${targetPct}%`, background: "rgba(255,255,255,0.3)" }}
           title={`Target: ${metric.target}`}
         />
       </div>
-      <div className="flex justify-between text-xs text-slate-400">
+      <div className="flex justify-between text-xs" style={{ color: "rgba(255,255,255,0.28)" }}>
         <span>{metric.min}</span>
         <span>Target {metric.target}</span>
         <span>{metric.max}</span>
@@ -38,13 +48,16 @@ function MetricRow({ metric }) {
   );
 }
 
-const CustomTooltip = ({ active, payload, label }) => {
+const DarkTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-md text-xs">
-      <p className="font-semibold text-slate-700 mb-1">{label}</p>
-      {payload.map((p) => (
-        <p key={p.dataKey} style={{ color: p.color }}>
+    <div style={{
+      background: "rgba(10,15,28,0.92)", border: "1px solid rgba(255,255,255,0.1)",
+      borderRadius: "10px", padding: "8px 12px", fontSize: "11px", backdropFilter: "blur(12px)",
+    }}>
+      <p style={{ color: "rgba(255,255,255,0.6)", marginBottom: "2px" }}>{label}</p>
+      {payload.map(p => (
+        <p key={p.dataKey} style={{ color: p.color, fontWeight: 600 }}>
           {p.name}: {p.value}
         </p>
       ))}
@@ -52,37 +65,45 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-export default function USGACard({ data, loading }) {
-  if (loading || !data) {
-    return (
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 animate-pulse">
-        <div className="h-4 bg-slate-200 rounded w-1/3 mb-4" />
-        {[0, 1, 2].map((i) => <div key={i} className="h-10 bg-slate-200 rounded mb-3" />)}
+function LoadingSkeleton() {
+  return (
+    <div className="glass-card p-6 flex flex-col gap-4">
+      <div className="flex justify-between">
+        <div className="shimmer-block h-4 w-32" />
+        <div className="shimmer-block h-4 w-28" />
       </div>
-    );
-  }
+      {[0, 1, 2, 3, 4].map(i => <div key={i} className="shimmer-block h-12" />)}
+    </div>
+  );
+}
 
-  const outOfRange = data.metrics?.filter((m) => m.status === "out-of-range").length || 0;
+export default function USGACard({ data, loading }) {
+  if (loading || !data) return <LoadingSkeleton />;
+
+  const outOfRange = data.metrics?.filter(m => m.status === "out-of-range").length || 0;
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col gap-4">
+    <div className="glass-card p-6 flex flex-col gap-5">
+
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400">USGA Deacon</h2>
-          <p className="text-sm text-slate-500">{data.course}</p>
+          <p className="text-xs font-semibold tracking-widest uppercase"
+            style={{ color: "rgba(255,255,255,0.28)" }}>USGA Deacon</p>
+          <p className="text-sm mt-0.5" style={{ color: "rgba(255,255,255,0.45)" }}>{data.course}</p>
         </div>
-        <div className="text-right text-xs text-slate-400">
+        <div className="text-right text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
           <div className="flex items-center gap-1 justify-end">
-            <ClipboardCheck size={12} />
+            <ClipboardCheck size={11} style={{ color: "#60a5fa" }} />
             <span>{data.lastMeasured}</span>
           </div>
-          <div>{data.measuredBy}</div>
+          <div className="mt-0.5">{data.measuredBy}</div>
         </div>
       </div>
 
       {outOfRange > 0 && (
-        <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-sm text-red-700">
+        <div className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm"
+          style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#fca5a5" }}>
           <AlertCircle size={14} />
           {outOfRange} metric{outOfRange > 1 ? "s are" : " is"} out of range
         </div>
@@ -90,23 +111,42 @@ export default function USGACard({ data, loading }) {
 
       {/* Metrics */}
       <div className="flex flex-col gap-4">
-        {data.metrics?.map((m) => <MetricRow key={m.name} metric={m} />)}
+        {data.metrics?.map(m => <MetricRow key={m.name} metric={m} />)}
       </div>
 
       {/* 14-day stimp trend */}
-      {data.history && data.history.length > 0 && (
-        <div className="border-t border-slate-100 pt-4">
-          <p className="text-xs font-medium text-slate-500 mb-2 flex items-center gap-1">
-            <TrendingUp size={12} /> Green Speed — 14-day trend
+      {data.history?.length > 0 && (
+        <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          <p className="text-xs font-semibold flex items-center gap-1.5 mb-3"
+            style={{ color: "rgba(255,255,255,0.4)" }}>
+            <TrendingUp size={12} style={{ color: "#60a5fa" }} />
+            Green Speed — 14-day trend
           </p>
           <ResponsiveContainer width="100%" height={80}>
-            <LineChart data={data.history} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
-              <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} interval={3} />
-              <YAxis domain={[9, 12]} tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-              <Tooltip content={<CustomTooltip />} />
-              <ReferenceLine y={10.5} stroke="#94a3b8" strokeDasharray="4 4" />
-              <Line dataKey="stimp" name="Stimp" dot={false} stroke="#3b82f6" strokeWidth={2} />
-            </LineChart>
+            <AreaChart data={data.history} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
+              <defs>
+                <linearGradient id="stimpGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor="#60a5fa" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="#60a5fa" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="date"
+                tick={{ fontSize: 9, fill: "rgba(255,255,255,0.3)" }}
+                tickLine={false} axisLine={false} interval={3}
+              />
+              <YAxis domain={[2.7, 3.7]}
+                tick={{ fontSize: 9, fill: "rgba(255,255,255,0.3)" }}
+                tickLine={false} axisLine={false}
+              />
+              <Tooltip content={<DarkTooltip />} />
+              <ReferenceLine y={3.2} stroke="rgba(255,255,255,0.12)" strokeDasharray="4 4" />
+              <Area
+                dataKey="stimp" name="Stimp"
+                stroke="#60a5fa" strokeWidth={2}
+                fill="url(#stimpGrad)"
+                dot={false} activeDot={{ r: 3, fill: "#60a5fa" }}
+              />
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       )}
