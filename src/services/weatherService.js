@@ -12,13 +12,12 @@
  */
 
 const MOCK_MODE = false;
-const BASE_URL = "https://api.specconnect.net/api";
+const BASE_URL = "https://api.specconnect.net:6703/api";
 const API_KEY = "bf4854edebefaaa9964c765ab3f0cf09";
 
-// Fallback coordinates used for the forecast if the station doesn't return lat/lon
-// TODO: update to your course's actual coordinates
-const COURSE_LAT = 39.8283;
-const COURSE_LNG = -98.5795;
+// Ranfurlie Golf Club — Cranbourne West, Victoria
+const COURSE_LAT = -38.1208;
+const COURSE_LNG = 145.2481;
 
 // ── Open-Meteo forecast ───────────────────────────────────────────────────────
 
@@ -65,36 +64,32 @@ function randomVariation(base, range) {
 }
 
 function mapReading(station, reading, forecast) {
+  // SpecConnect returns metric values for AU accounts.
+  // The reading object may be a flat object or have a nested .Value property per field.
   const get = (key) => reading?.[key]?.Value ?? reading?.[key] ?? null;
 
-  const tempF       = get("AirTemperature") ?? get("Temperature");
-  const windSpeedMph = get("WindSpeed");
-  const windDir     = get("WindDirection");
-  const humidity    = get("RelativeHumidity") ?? get("Humidity");
-  const rainfallIn  = get("Precipitation") ?? get("Rainfall") ?? get("Rain");
-  const dewPointF   = get("DewPoint");
-  const solarRad    = get("SolarRadiation") ?? get("Solar");
-
-  // Convert imperial → metric
-  const tempC      = tempF       != null ? (tempF - 32) * 5 / 9        : null;
-  const windSpeed  = windSpeedMph != null ? windSpeedMph * 1.60934      : null;
-  const rainfall   = rainfallIn  != null ? rainfallIn * 25.4            : null;
-  const dewPoint   = dewPointF   != null ? (dewPointF - 32) * 5 / 9    : null;
+  const temperature  = get("AirTemperature") ?? get("Temperature");
+  const windSpeed    = get("WindSpeed");
+  const windDir      = get("WindDirection");
+  const humidity     = get("RelativeHumidity") ?? get("Humidity");
+  const rainfall     = get("Precipitation")    ?? get("Rainfall") ?? get("Rain");
+  const dewPoint     = get("DewPoint");
+  const solarRad     = get("SolarRadiation")   ?? get("Solar");
 
   let conditions = "Clear";
-  if (rainfall > 2.5)  conditions = "Rainy";
+  if (rainfall  > 2.5)   conditions = "Rainy";
   else if (humidity > 85) conditions = "Humid / Overcast";
-  else if (solarRad < 200) conditions = "Partly Cloudy";
+  else if (solarRad != null && solarRad < 200) conditions = "Partly Cloudy";
   else                    conditions = "Mostly Sunny";
 
   return {
-    temperature:    tempC     != null ? +tempC.toFixed(1)     : null,
-    humidity:       humidity  != null ? +humidity.toFixed(1)  : null,
-    windSpeed:      windSpeed != null ? +windSpeed.toFixed(1) : null,
+    temperature:    temperature != null ? +Number(temperature).toFixed(1) : null,
+    humidity:       humidity    != null ? +Number(humidity).toFixed(1)    : null,
+    windSpeed:      windSpeed   != null ? +Number(windSpeed).toFixed(1)   : null,
     windDirection:  windDir ?? "—",
-    rainfall:       rainfall  != null ? +rainfall.toFixed(1)  : null,
-    dewPoint:       dewPoint  != null ? +dewPoint.toFixed(1)  : null,
-    solarRadiation: solarRad  != null ? +solarRad.toFixed(0)  : null,
+    rainfall:       rainfall    != null ? +Number(rainfall).toFixed(1)    : null,
+    dewPoint:       dewPoint    != null ? +Number(dewPoint).toFixed(1)    : null,
+    solarRadiation: solarRad    != null ? +Number(solarRad).toFixed(0)    : null,
     stationName:    station.StationName ?? station.Name ?? "Weather Station",
     lastUpdated:    new Date().toLocaleTimeString(),
     conditions,
@@ -112,28 +107,37 @@ async function fetchLive() {
   if (!stations?.length) throw new Error("No Spectrum stations found for this account");
 
   const station   = stations[0];
-  const stationId = station.StationId ?? station.ID ?? station.Id;
+  const stationId = station.StationId ?? station.StationID ?? station.ID ?? station.Id;
   const lat       = station.Latitude  ?? station.lat ?? COURSE_LAT;
   const lng       = station.Longitude ?? station.lon ?? COURSE_LNG;
 
-  // 2. Fetch sensor data + forecast in parallel
-  const now         = new Date();
-  const twoHoursAgo = new Date(now - 2 * 60 * 60 * 1000);
-  const fmt         = (d) => d.toISOString().slice(0, 19);
-
+  // 2. Fetch current sensor reading + forecast in parallel.
+  //    Try GetCurrentData first (real-time); fall back to GetHourlyData if 404.
   const [dataRes, forecast] = await Promise.all([
-    fetch(
-      `${BASE_URL}/Customer/GetHourlyData?customerApiKey=${API_KEY}` +
-      `&stationId=${stationId}&startDate=${fmt(twoHoursAgo)}&endDate=${fmt(now)}`
-    ),
+    fetch(`${BASE_URL}/Customer/GetCurrentData?customerApiKey=${API_KEY}&stationId=${stationId}`),
     fetchForecast(lat, lng),
   ]);
 
-  if (!dataRes.ok) throw new Error(`Spectrum data error: ${dataRes.status}`);
-  const readings = await dataRes.json();
-  const latest   = Array.isArray(readings) ? readings[readings.length - 1] : readings;
+  let reading;
+  if (dataRes.ok) {
+    reading = await dataRes.json();
+  } else if (dataRes.status === 404) {
+    // Endpoint not available — fall back to most recent hourly record
+    const now = new Date();
+    const twoHoursAgo = new Date(now - 2 * 60 * 60 * 1000);
+    const fmt = (d) => d.toISOString().slice(0, 19);
+    const hourlyRes = await fetch(
+      `${BASE_URL}/Customer/GetHourlyData?customerApiKey=${API_KEY}` +
+      `&stationId=${stationId}&startDate=${fmt(twoHoursAgo)}&endDate=${fmt(now)}`
+    );
+    if (!hourlyRes.ok) throw new Error(`Spectrum data error: ${hourlyRes.status}`);
+    const rows = await hourlyRes.json();
+    reading = Array.isArray(rows) ? rows[rows.length - 1] : rows;
+  } else {
+    throw new Error(`Spectrum data error: ${dataRes.status}`);
+  }
 
-  return mapReading(station, latest, forecast);
+  return mapReading(station, reading, forecast);
 }
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
