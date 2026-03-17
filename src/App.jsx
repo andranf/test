@@ -122,7 +122,7 @@ export default function App() {
             <div>
               <p className="text-xs font-bold tracking-[0.28em] uppercase mb-1"
                 style={{ color: "rgba(52,211,153,0.65)" }}>
-                Cranbourne West · Victoria · Top 100
+                Cranbourne West · Victoria
               </p>
               <div className="flex items-baseline gap-3">
                 <h1 className="text-5xl md:text-6xl font-black tracking-tight leading-none ranfurlie-title">
@@ -220,9 +220,10 @@ export default function App() {
               <TDRCard         data={tdr}         loading={loading} />,
             ].map((card, i) => (
               <motion.div key={i}
-                initial={{ opacity: 0, y: 36, scale: 0.97 }}
-                animate={{ opacity: 1, y:  0, scale: 1    }}
-                transition={{ duration: 0.65, delay: 0.3 + i * 0.09, ease: [0.25, 0.46, 0.45, 0.94] }}
+                initial={{ opacity: 0, y: 48, scale: 0.97 }}
+                whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                viewport={{ once: true, margin: "-60px" }}
+                transition={{ duration: 0.6, delay: i * 0.07, ease: [0.25, 0.46, 0.45, 0.94] }}
               >
                 {card}
               </motion.div>
