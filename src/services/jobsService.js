@@ -10,7 +10,7 @@
  * Set MOCK_MODE = true to use generated data while the live endpoint is confirmed.
  */
 
-const MOCK_MODE = false;
+const MOCK_MODE = true; // TODO: set false once BASE_URL is confirmed via ASB DevTools inspection
 
 // TODO: confirm BASE_URL by inspecting the ASB web app's network requests
 const BASE_URL = "https://api.asbtasktracker.com/api/v1";
@@ -97,34 +97,182 @@ async function fetchLive() {
 }
 
 // ── Mock data (used when MOCK_MODE = true) ────────────────────────────────────
-
-const CREW = ["Mike R.", "Sarah L.", "Tom B.", "Jake M.", "Chris P.", "Dana K."];
-const CATEGORIES = ["Mowing", "Irrigation", "Fertilization", "Aeration", "Topdressing", "Bunker", "Tree Work", "Equipment"];
-const PRIORITIES = ["Low", "Normal", "High", "Urgent"];
-const LOCATIONS = ["Hole 1-6", "Hole 7-12", "Hole 13-18", "Practice Green", "Driving Range", "Clubhouse Grounds", "Maintenance Area"];
-
-function randomItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+// Reflects current Ranfurlie conditions: clipping flush post-PGR gap (Feb 22-26),
+// recovery from 25mm rain event (Feb 28), GDD ~3300, high ET season winding down.
 
 function getMockData() {
-  const jobs = Array.from({ length: 20 }, (_, i) => {
-    const r = Math.random();
-    const status = r < 0.15 ? "Overdue" : r < 0.35 ? "In Progress" : r < 0.55 ? "Completed" : "Scheduled";
-    const due = new Date();
-    if (status === "Overdue") due.setDate(due.getDate() - Math.floor(Math.random() * 3 + 1));
-    else if (status === "Scheduled") due.setDate(due.getDate() + Math.floor(Math.random() * 7 + 1));
-    const category = randomItem(CATEGORIES);
-    return {
-      id: `JOB-${1000 + i}`,
-      title: `${category} — ${randomItem(LOCATIONS)}`,
-      category,
-      assignee: randomItem(CREW),
-      status,
-      statusColor: statusColor(status),
-      priority: randomItem(PRIORITIES),
-      dueDate: due.toLocaleDateString([], { month: "short", day: "numeric" }),
-      estimatedHours: +(Math.random() * 4 + 0.5).toFixed(1),
-    };
-  });
+  const jobs = [
+    // In Progress — active today
+    {
+      id: "JOB-1001",
+      title: "Greens mow — all 18 holes",
+      category: "Mowing",
+      assignee: "Mike R.",
+      status: "In Progress",
+      statusColor: statusColor("In Progress"),
+      priority: "High",
+      dueDate: new Date().toLocaleDateString([], { month: "short", day: "numeric" }),
+      estimatedHours: 3.5,
+    },
+    {
+      id: "JOB-1002",
+      title: "PGR application — greens & approaches",
+      category: "PGR",
+      assignee: "Sarah L.",
+      status: "In Progress",
+      statusColor: statusColor("In Progress"),
+      priority: "Urgent",
+      dueDate: new Date().toLocaleDateString([], { month: "short", day: "numeric" }),
+      estimatedHours: 2.5,
+    },
+    {
+      id: "JOB-1003",
+      title: "Irrigation audit — post 25mm rain event",
+      category: "Irrigation",
+      assignee: "Tom B.",
+      status: "In Progress",
+      statusColor: statusColor("In Progress"),
+      priority: "High",
+      dueDate: new Date().toLocaleDateString([], { month: "short", day: "numeric" }),
+      estimatedHours: 2.0,
+    },
+    // Scheduled
+    {
+      id: "JOB-1004",
+      title: "Fairway mow — Holes 1–9",
+      category: "Mowing",
+      assignee: "Jake M.",
+      status: "Scheduled",
+      statusColor: statusColor("Scheduled"),
+      priority: "Normal",
+      dueDate: (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toLocaleDateString([], { month: "short", day: "numeric" }); })(),
+      estimatedHours: 4.0,
+    },
+    {
+      id: "JOB-1005",
+      title: "Topdressing — practice green",
+      category: "Topdressing",
+      assignee: "Chris P.",
+      status: "Scheduled",
+      statusColor: statusColor("Scheduled"),
+      priority: "Normal",
+      dueDate: (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toLocaleDateString([], { month: "short", day: "numeric" }); })(),
+      estimatedHours: 3.0,
+    },
+    {
+      id: "JOB-1006",
+      title: "Herbicide — fairway broadleaf spot spray",
+      category: "Herbicide",
+      assignee: "Dana K.",
+      status: "Scheduled",
+      statusColor: statusColor("Scheduled"),
+      priority: "Normal",
+      dueDate: (() => { const d = new Date(); d.setDate(d.getDate() + 2); return d.toLocaleDateString([], { month: "short", day: "numeric" }); })(),
+      estimatedHours: 2.5,
+    },
+    {
+      id: "JOB-1007",
+      title: "Bunker raking & edge maintenance — Holes 10–18",
+      category: "Bunker",
+      assignee: "Mike R.",
+      status: "Scheduled",
+      statusColor: statusColor("Scheduled"),
+      priority: "Normal",
+      dueDate: (() => { const d = new Date(); d.setDate(d.getDate() + 2); return d.toLocaleDateString([], { month: "short", day: "numeric" }); })(),
+      estimatedHours: 3.5,
+    },
+    {
+      id: "JOB-1008",
+      title: "Fertiliser application — greens (post clipping flush)",
+      category: "Fertilization",
+      assignee: "Sarah L.",
+      status: "Scheduled",
+      statusColor: statusColor("Scheduled"),
+      priority: "High",
+      dueDate: (() => { const d = new Date(); d.setDate(d.getDate() + 3); return d.toLocaleDateString([], { month: "short", day: "numeric" }); })(),
+      estimatedHours: 2.0,
+    },
+    {
+      id: "JOB-1009",
+      title: "Greens solid tine aeration — 18 holes",
+      category: "Aeration",
+      assignee: "Tom B.",
+      status: "Scheduled",
+      statusColor: statusColor("Scheduled"),
+      priority: "Normal",
+      dueDate: (() => { const d = new Date(); d.setDate(d.getDate() + 4); return d.toLocaleDateString([], { month: "short", day: "numeric" }); })(),
+      estimatedHours: 6.0,
+    },
+    {
+      id: "JOB-1010",
+      title: "Cart path inspection — drainage check post rain",
+      category: "Other",
+      assignee: "Jake M.",
+      status: "Scheduled",
+      statusColor: statusColor("Scheduled"),
+      priority: "Low",
+      dueDate: (() => { const d = new Date(); d.setDate(d.getDate() + 4); return d.toLocaleDateString([], { month: "short", day: "numeric" }); })(),
+      estimatedHours: 1.5,
+    },
+    // Completed today
+    {
+      id: "JOB-1011",
+      title: "Hole cup change — all 18 holes",
+      category: "Other",
+      assignee: "Chris P.",
+      status: "Completed",
+      statusColor: statusColor("Completed"),
+      priority: "Normal",
+      dueDate: new Date().toLocaleDateString([], { month: "short", day: "numeric" }),
+      estimatedHours: 1.5,
+    },
+    {
+      id: "JOB-1012",
+      title: "Clipping volume measurement — greens",
+      category: "Mowing",
+      assignee: "Dana K.",
+      status: "Completed",
+      statusColor: statusColor("Completed"),
+      priority: "Normal",
+      dueDate: new Date().toLocaleDateString([], { month: "short", day: "numeric" }),
+      estimatedHours: 0.5,
+    },
+    {
+      id: "JOB-1013",
+      title: "Morning ET & weather station check",
+      category: "Irrigation",
+      assignee: "Mike R.",
+      status: "Completed",
+      statusColor: statusColor("Completed"),
+      priority: "Normal",
+      dueDate: new Date().toLocaleDateString([], { month: "short", day: "numeric" }),
+      estimatedHours: 0.5,
+    },
+    // Overdue
+    {
+      id: "JOB-1014",
+      title: "Fungicide application — greens (disease watch)",
+      category: "Fungicide",
+      assignee: "Sarah L.",
+      status: "Overdue",
+      statusColor: statusColor("Overdue"),
+      priority: "Urgent",
+      dueDate: (() => { const d = new Date(); d.setDate(d.getDate() - 2); return d.toLocaleDateString([], { month: "short", day: "numeric" }); })(),
+      estimatedHours: 2.0,
+    },
+    {
+      id: "JOB-1015",
+      title: "Reel grind & bedknife set — No. 3 greens mower",
+      category: "Equipment",
+      assignee: "Tom B.",
+      status: "Overdue",
+      statusColor: statusColor("Overdue"),
+      priority: "High",
+      dueDate: (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toLocaleDateString([], { month: "short", day: "numeric" }); })(),
+      estimatedHours: 3.0,
+    },
+  ];
+
   const byStatus = {
     Overdue: jobs.filter((j) => j.status === "Overdue").length,
     "In Progress": jobs.filter((j) => j.status === "In Progress").length,
