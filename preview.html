@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TurfNerd — Preview</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+    background: #030d08;
+    color: #f1f5f9;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  /* ── Animated background blobs ── */
+  .bg {
+    position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0;
+  }
+  .blob {
+    position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.18;
+    animation: drift 18s ease-in-out infinite;
+  }
+  .blob-1 { width: 600px; height: 600px; background: #064e2a; top: -120px; left: -80px; animation-delay: 0s; }
+  .blob-2 { width: 500px; height: 500px; background: #0a3a1a; top: 40%; right: -100px; animation-delay: -6s; }
+  .blob-3 { width: 400px; height: 400px; background: #052e18; bottom: -80px; left: 30%; animation-delay: -12s; }
+  @keyframes drift {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33%       { transform: translate(30px, -40px) scale(1.05); }
+    66%       { transform: translate(-20px, 30px) scale(0.97); }
+  }
+
+  /* ── Glass card ── */
+  .glass-card {
+    background: linear-gradient(145deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.052) 100%);
+    backdrop-filter: blur(36px) saturate(190%) brightness(1.04);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 22px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.13);
+    transition: background 0.3s, transform 0.3s, box-shadow 0.3s;
+    overflow: hidden;
+  }
+  .glass-card:hover {
+    background: linear-gradient(145deg, rgba(255,255,255,0.115) 0%, rgba(255,255,255,0.07) 100%);
+    border-color: rgba(255,255,255,0.20);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.18);
+    transform: translateY(-2px);
+  }
+
+  /* ── Layout ── */
+  .page { position: relative; z-index: 1; padding: 32px 40px; max-width: 1200px; margin: 0 auto; }
+
+  /* ── Nav bar ── */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 40px;
+  }
+  .brand { display: flex; flex-direction: column; gap: 2px; }
+  .brand-sub {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.26em; text-transform: uppercase;
+    color: rgba(52,211,153,0.65);
+  }
+  .brand-title {
+    font-size: 26px; font-weight: 900; letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.72) 60%, rgba(52,211,153,0.7) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .nav-tabs { display: flex; gap: 8px; }
+  .tab {
+    display: flex; align-items: center; gap: 6px; padding: 8px 16px;
+    border-radius: 12px; font-size: 13px; font-weight: 600; border: none; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tab-inactive {
+    background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.45);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .tab-active {
+    background: rgba(52,211,153,0.14); color: #6ee7b7;
+    border: 1px solid rgba(52,211,153,0.28);
+  }
+
+  /* ── Blog header ── */
+  .blog-header { margin-bottom: 28px; }
+  .blog-header-eyebrow {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase;
+    color: rgba(52,211,153,0.65);
+  }
+  .blog-title {
+    font-size: 48px; font-weight: 900; letter-spacing: -0.03em; line-height: 1;
+    background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.72) 60%, rgba(52,211,153,0.6) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    margin-bottom: 6px;
+  }
+  .blog-desc { font-size: 13px; color: rgba(255,255,255,0.38); }
+
+  /* ── Search + Filter ── */
+  .controls { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+  .search-wrap { position: relative; flex: 1; min-width: 200px; }
+  .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); opacity: 0.35; }
+  .search-input {
+    width: 100%; padding: 10px 14px 10px 36px; border-radius: 12px; font-size: 13px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10);
+    color: rgba(255,255,255,0.82); outline: none;
+  }
+  .filter-pills { display: flex; gap: 6px; align-items: center; }
+  .pill {
+    padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    cursor: pointer; border: none; transition: all 0.2s;
+  }
+  .pill-active { background: rgba(52,211,153,0.18); color: #6ee7b7; border: 1px solid rgba(52,211,153,0.3); }
+  .pill-inactive { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.08); }
+  .post-count { font-size: 11px; color: rgba(255,255,255,0.28); margin-bottom: 16px; }
+
+  /* ── Post grid ── */
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+
+  /* ── Post card ── */
+  .card-accent { height: 3px; width: 100%; }
+  .card-body { padding: 22px 24px; }
+  .card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .category-badge {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 20px;
+  }
+  .read-time { display: flex; align-items: center; gap: 5px; font-size: 11px; color: rgba(255,255,255,0.35); }
+  .card-title { font-size: 15px; font-weight: 700; line-height: 1.35; color: rgba(255,255,255,0.92); margin-bottom: 8px; }
+  .card-excerpt { font-size: 12.5px; line-height: 1.65; color: rgba(255,255,255,0.52); margin-bottom: 16px; }
+  .card-footer { display: flex; align-items: center; justify-content: space-between; }
+  .card-date { display: flex; align-items: center; gap: 5px; font-size: 11px; color: rgba(255,255,255,0.35); }
+  .read-more { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; }
+  .card-tags {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px;
+    padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .tag {
+    display: flex; align-items: center; gap: 4px; font-size: 10px;
+    padding: 3px 8px; border-radius: 20px;
+    background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.35);
+  }
+
+  /* ── Single post view ── */
+  .post-view { max-width: 720px; margin: 0 auto; }
+  .back-btn {
+    display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500;
+    color: rgba(255,255,255,0.4); margin-bottom: 28px; background: none; border: none;
+    cursor: pointer; padding: 0;
+  }
+  .post-card-body { padding: 40px 48px; }
+  .post-title { font-size: 28px; font-weight: 900; line-height: 1.2; color: rgba(255,255,255,0.93); margin-bottom: 16px; }
+  .post-meta {
+    display: flex; gap: 20px; flex-wrap: wrap;
+    padding-bottom: 28px; border-bottom: 1px solid rgba(255,255,255,0.07); margin-bottom: 28px;
+  }
+  .meta-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: rgba(255,255,255,0.4); }
+  .post-body p { font-size: 13.5px; line-height: 1.8; color: rgba(255,255,255,0.62); margin-bottom: 14px; }
+  .post-body h2 { font-size: 18px; font-weight: 700; color: rgba(255,255,255,0.9); margin: 28px 0 10px; }
+  .post-body ul { margin: 8px 0 16px 0; }
+  .post-body li {
+    display: flex; gap: 8px; font-size: 13px; line-height: 1.7; color: rgba(255,255,255,0.62); margin-bottom: 6px;
+  }
+  .li-arrow { color: rgba(52,211,153,0.7); flex-shrink: 0; margin-top: 3px; }
+  strong { color: rgba(255,255,255,0.88); font-weight: 600; }
+
+  /* ── View toggle ── */
+  .view { display: none; }
+  .view.active { display: block; }
+</style>
+</head>
+<body>
+
+<div class="bg">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+
+<div class="page">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="brand">
+      <span class="brand-sub">andrewturfnerd</span>
+      <span class="brand-title">TurfNerd</span>
+    </div>
+    <div class="nav-tabs">
+      <button class="tab tab-inactive" onclick="showView('dashboard')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </button>
+      <button class="tab tab-active" onclick="showView('blog')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        TurfNerd
+      </button>
+    </div>
+  </div>
+
+  <!-- ── BLOG LIST VIEW ── -->
+  <div id="view-blog" class="view active">
+
+    <div class="blog-header">
+      <div class="blog-header-eyebrow">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        andrewturfnerd
+      </div>
+      <div class="blog-title">TurfNerd</div>
+      <div class="blog-desc">Turf management philosophy, agronomy, and observations from Australian greenkeeping.</div>
+    </div>
+
+    <div class="controls">
+      <div class="search-wrap">
+        <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="search-input" placeholder="Search posts…" />
+      </div>
+      <div class="filter-pills">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        <button class="pill pill-active">All</button>
+        <button class="pill pill-inactive">Philosophy</button>
+        <button class="pill pill-inactive">Meta</button>
+        <button class="pill pill-inactive">Agronomy</button>
+      </div>
+    </div>
+    <div class="post-count">4 posts</div>
+
+    <div class="grid">
+
+      <!-- Card 1 -->
+      <div class="glass-card" onclick="showView('post')" style="cursor:pointer">
+        <div class="card-accent" style="background:#34d399; opacity:0.85"></div>
+        <div class="card-body">
+          <div class="card-top">
+            <span class="category-badge" style="background:rgba(52,211,153,0.12);color:#34d399;border:1px solid rgba(52,211,153,0.28)">Philosophy</span>
+            <div class="read-time">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              7 min read
+            </div>
+          </div>
+          <div class="card-title">On Autonomy: What It Actually Means to Run a Course in Australia</div>
+          <div class="card-excerpt">Australian greenkeeping has always demanded a certain self-reliance — we're geographically isolated, understaffed relative to our counterparts overseas, and expected to deliver world-class surfaces on tight budgets. But I think there's something deeper going on with autonomy in this industry.</div>
+          <div class="card-footer">
+            <div class="card-date">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              19 March 2026
+            </div>
+            <div class="read-more" style="color:#34d399">
+              Read more
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </div>
+          </div>
+          <div class="card-tags">
+            <span class="tag">◆ autonomy</span>
+            <span class="tag">◆ australia</span>
+            <span class="tag">◆ greenkeeping</span>
+            <span class="tag">◆ industry</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="glass-card" style="cursor:pointer">
+        <div class="card-accent" style="background:#a78bfa; opacity:0.85"></div>
+        <div class="card-body">
+          <div class="card-top">
+            <span class="category-badge" style="background:rgba(167,139,250,0.12);color:#a78bfa;border:1px solid rgba(167,139,250,0.28)">Meta</span>
+            <div class="read-time">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              4 min read
+            </div>
+          </div>
+          <div class="card-title">Why TurfNerd</div>
+          <div class="card-excerpt">I've been andrewturfnerd online for a while now. Here's what the name actually means to me and why I think there's something worth reclaiming in the word 'nerd' for this industry.</div>
+          <div class="card-footer">
+            <div class="card-date">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              12 March 2026
+            </div>
+            <div class="read-more" style="color:#a78bfa">
+              Read more
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </div>
+          </div>
+          <div class="card-tags">
+            <span class="tag">◆ about</span>
+            <span class="tag">◆ turfnerd</span>
+            <span class="tag">◆ philosophy</span>
+            <span class="tag">◆ industry</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="glass-card" style="cursor:pointer">
+        <div class="card-accent" style="background:#fbbf24; opacity:0.85"></div>
+        <div class="card-body">
+          <div class="card-top">
+            <span class="category-badge" style="background:rgba(251,191,36,0.12);color:#fbbf24;border:1px solid rgba(251,191,36,0.28)">Philosophy</span>
+            <div class="read-time">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              5 min read
+            </div>
+          </div>
+          <div class="card-title">Data-Driven Intuition Isn't a Contradiction</div>
+          <div class="card-excerpt">There's a false tension in how we talk about data and experience in greenkeeping. 'You can't replace gut feel' and 'trust the numbers' get treated as opposites. They're not.</div>
+          <div class="card-footer">
+            <div class="card-date">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              24 February 2026
+            </div>
+            <div class="read-more" style="color:#fbbf24">
+              Read more
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </div>
+          </div>
+          <div class="card-tags">
+            <span class="tag">◆ data</span>
+            <span class="tag">◆ intuition</span>
+            <span class="tag">◆ technology</span>
+            <span class="tag">◆ expertise</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="glass-card" style="cursor:pointer">
+        <div class="card-accent" style="background:#60a5fa; opacity:0.85"></div>
+        <div class="card-body">
+          <div class="card-top">
+            <span class="category-badge" style="background:rgba(96,165,250,0.12);color:#60a5fa;border:1px solid rgba(96,165,250,0.28)">Agronomy</span>
+            <div class="read-time">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              6 min read
+            </div>
+          </div>
+          <div class="card-title">Bentgrass in Australia: The Wrong Grass in the Right Place</div>
+          <div class="card-excerpt">We grow creeping bentgrass on putting greens across much of southeastern Australia — a cool-season grass in a country that regularly tries to kill it. Here's why we keep doing it anyway, and what it actually takes.</div>
+          <div class="card-footer">
+            <div class="card-date">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              10 February 2026
+            </div>
+            <div class="read-more" style="color:#60a5fa">
+              Read more
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </div>
+          </div>
+          <div class="card-tags">
+            <span class="tag">◆ bentgrass</span>
+            <span class="tag">◆ australia</span>
+            <span class="tag">◆ putting greens</span>
+            <span class="tag">◆ cultivars</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── SINGLE POST VIEW ── -->
+  <div id="view-post" class="view">
+    <div class="post-view">
+
+      <button class="back-btn" onclick="showView('blog')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Back to Blog
+      </button>
+
+      <div class="glass-card">
+        <div class="card-accent" style="background:#34d399; opacity:0.85"></div>
+        <div class="post-card-body">
+          <span class="category-badge" style="background:rgba(52,211,153,0.12);color:#34d399;border:1px solid rgba(52,211,153,0.28);display:inline-block;margin-bottom:18px">Philosophy</span>
+
+          <div class="post-title">On Autonomy: What It Actually Means to Run a Course in Australia</div>
+
+          <div class="post-meta">
+            <div class="meta-item">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Andrew
+            </div>
+            <div class="meta-item">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              19 March 2026
+            </div>
+            <div class="meta-item">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              7 min read
+            </div>
+          </div>
+
+          <div class="post-body">
+            <p>Australian greenkeeping has always demanded a certain self-reliance. We're geographically isolated, understaffed relative to counterparts overseas, and expected to deliver world-class surfaces on tight budgets. But I think there's something deeper going on with autonomy in this industry, and it's worth unpacking.</p>
+
+            <h2>The Word Gets Used Loosely</h2>
+            <p>When I say autonomy, I'm not talking about going rogue or ignoring agronomic science. I mean something more specific: the capacity to make confident, well-reasoned decisions without constantly seeking external validation — from consultants, from chemical reps, from what other courses are doing.</p>
+            <p>It's a disposition, not a technique.</p>
+
+            <h2>Why Australia Demands It More</h2>
+            <p>In the UK or the US, you can have a bad season and your regional agronomist is a two-hour drive away. In Australia, you might be in a situation where the nearest experienced colleague is interstate, the product registrations are different, and the climate swings in ways that no overseas publication prepared you for.</p>
+
+            <h2>What It Looks Like in Practice</h2>
+            <ul>
+              <li><span class="li-arrow">▸</span><span><strong>Knowing your environment deeply.</strong> Not textbook soil science, but your soil. How it behaves in February versus August.</span></li>
+              <li><span class="li-arrow">▸</span><span><strong>Understanding mechanisms, not just recipes.</strong> If you know why a nitrogen application does what it does, you can adapt when the product you usually use isn't available.</span></li>
+              <li><span class="li-arrow">▸</span><span><strong>Data that you actually trust.</strong> Affordable sensors, better weather data, disease forecasting models — helping greenkeepers develop a data-backed intuition.</span></li>
+              <li><span class="li-arrow">▸</span><span><strong>A willingness to be wrong.</strong> Autonomy without humility is just stubbornness.</span></li>
+            </ul>
+
+            <h2>Where I Land</h2>
+            <p>I think autonomy in Australian greenkeeping is both a practical necessity and a professional ideal worth pursuing deliberately. Not because external expertise is bad — it isn't — but because the people who do this job best are the ones who use that expertise to sharpen their own thinking, not replace it.</p>
+            <p>This blog is partly about working through what that looks like. More to come.</p>
+          </div>
+
+          <div class="card-tags" style="margin-top:28px;padding-top:22px;border-top:1px solid rgba(255,255,255,0.07)">
+            <span class="tag">◆ autonomy</span>
+            <span class="tag">◆ australia</span>
+            <span class="tag">◆ greenkeeping</span>
+            <span class="tag">◆ industry</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+}
+</script>
+</body>
+</html>
