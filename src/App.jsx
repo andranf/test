@@ -105,7 +105,7 @@ export default function App() {
 
   if (view === "blog") {
     return (
-      <div className="relative min-h-screen overflow-x-hidden ranfurlie-bg">
+      <div className="relative min-h-screen overflow-x-hidden turfnerd-bg">
         <AnimatedCanvas />
         <div className="relative z-10">
           {/* Blog nav bar */}
@@ -113,11 +113,10 @@ export default function App() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <p className="text-xs font-bold tracking-[0.28em] uppercase mb-1" style={{ color: "rgba(52,211,153,0.65)" }}>
-                  Cranbourne West · Victoria
+                  andrewturfnerd
                 </p>
                 <div className="flex items-baseline gap-3">
-                  <h1 className="text-3xl font-black tracking-tight leading-none ranfurlie-title">TurfNerd</h1>
-                  <span className="text-xs font-semibold" style={{ color: "rgba(255,255,255,0.3)" }}>andrewturfnerd</span>
+                  <h1 className="text-3xl font-black tracking-tight leading-none turfnerd-title">TurfNerd</h1>
                 </div>
               </div>
               <nav className="flex gap-2">
@@ -144,7 +143,7 @@ export default function App() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden ranfurlie-bg">
+    <div className="relative min-h-screen overflow-x-hidden turfnerd-bg">
 
       {/* Canvas fluid background */}
       <AnimatedCanvas />
@@ -169,7 +168,7 @@ export default function App() {
                 Cranbourne West · Victoria
               </p>
               <div className="flex items-baseline gap-3">
-                <h1 className="text-5xl md:text-6xl font-black tracking-tight leading-none ranfurlie-title">
+                <h1 className="text-5xl md:text-6xl font-black tracking-tight leading-none turfnerd-title">
                   Ranfurlie
                 </h1>
                 <span className="text-xl md:text-2xl font-semibold"

@@ -48,7 +48,7 @@ export default function BlogPage() {
               andrewturfnerd
             </p>
           </div>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-none ranfurlie-title mb-2">
+          <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-none turfnerd-title mb-2">
             TurfNerd
           </h1>
           <p className="text-sm" style={{ color: "rgba(255,255,255,0.38)" }}>

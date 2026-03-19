@@ -14,9 +14,9 @@ body {
 
 /* ── Brand ────────────────────────────────────────────── */
 
-.ranfurlie-bg { background: #030d08; }
+.turfnerd-bg { background: #030d08; }
 
-.ranfurlie-title {
+.turfnerd-title {
   background: linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,0.72) 60%, rgba(52,211,153,0.6) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
