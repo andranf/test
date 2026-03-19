@@ -45,14 +45,14 @@ export default function BlogPage() {
           <div className="flex items-center gap-3 mb-1">
             <BookOpen size={16} style={{ color: "rgba(52,211,153,0.7)" }} />
             <p className="text-xs font-bold tracking-[0.22em] uppercase" style={{ color: "rgba(52,211,153,0.65)" }}>
-              Greenkeeping Journal
+              andrewturfnerd
             </p>
           </div>
           <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-none ranfurlie-title mb-2">
-            From the Shed
+            TurfNerd
           </h1>
           <p className="text-sm" style={{ color: "rgba(255,255,255,0.38)" }}>
-            Agronomy insights, course updates, and maintenance notes from Ranfurlie's grounds team.
+            Turf management philosophy, agronomy, and observations from Australian greenkeeping.
           </p>
         </motion.div>
 

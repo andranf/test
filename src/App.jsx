@@ -116,8 +116,8 @@ export default function App() {
                   Cranbourne West · Victoria
                 </p>
                 <div className="flex items-baseline gap-3">
-                  <h1 className="text-3xl font-black tracking-tight leading-none ranfurlie-title">Ranfurlie</h1>
-                  <span className="text-base font-semibold" style={{ color: "rgba(52,211,153,0.8)" }}>GreenOps</span>
+                  <h1 className="text-3xl font-black tracking-tight leading-none ranfurlie-title">TurfNerd</h1>
+                  <span className="text-xs font-semibold" style={{ color: "rgba(255,255,255,0.3)" }}>andrewturfnerd</span>
                 </div>
               </div>
               <nav className="flex gap-2">
@@ -132,7 +132,7 @@ export default function App() {
                   className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
                   style={{ background: "rgba(52,211,153,0.14)", color: "#6ee7b7", border: "1px solid rgba(52,211,153,0.28)" }}
                 >
-                  <BookOpen size={14} /> Blog
+                  <BookOpen size={14} /> TurfNerd
                 </button>
               </nav>
             </div>
@@ -208,7 +208,7 @@ export default function App() {
                   className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200"
                   style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.08)" }}
                 >
-                  <BookOpen size={14} /> Blog
+                  <BookOpen size={14} /> TurfNerd
                 </button>
               </nav>
             <div className="flex items-center gap-3 flex-wrap">
