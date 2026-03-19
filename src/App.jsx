@@ -105,39 +105,23 @@ export default function App() {
 
   if (view === "blog") {
     return (
-      <div className="relative min-h-screen overflow-x-hidden turfnerd-bg">
-        <AnimatedCanvas />
-        <div className="relative z-10">
-          {/* Blog nav bar */}
-          <div className="px-4 md:px-6 lg:px-8 pt-5 pb-0 max-w-7xl mx-auto">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <p className="text-xs font-bold tracking-[0.28em] uppercase mb-1" style={{ color: "rgba(52,211,153,0.65)" }}>
-                  andrewturfnerd
-                </p>
-                <div className="flex items-baseline gap-3">
-                  <h1 className="text-3xl font-black tracking-tight leading-none turfnerd-title">TurfNerd</h1>
-                </div>
-              </div>
-              <nav className="flex gap-2">
-                <button
-                  onClick={() => setView("dashboard")}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200"
-                  style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.08)" }}
-                >
-                  <LayoutDashboard size={14} /> Dashboard
-                </button>
-                <button
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-                  style={{ background: "rgba(52,211,153,0.14)", color: "#6ee7b7", border: "1px solid rgba(52,211,153,0.28)" }}
-                >
-                  <BookOpen size={14} /> TurfNerd
-                </button>
-              </nav>
+      <div className="blog-shell">
+        <header className="blog-topbar">
+          <div className="blog-topbar-inner">
+            <div className="flex items-center gap-4">
+              <span className="blog-wordmark">TurfNerd</span>
+              <span className="blog-handle">andrewturfnerd</span>
             </div>
+            <button
+              onClick={() => setView("dashboard")}
+              className="blog-dash-btn"
+            >
+              <LayoutDashboard size={13} />
+              GreenOps
+            </button>
           </div>
-          <BlogPage />
-        </div>
+        </header>
+        <BlogPage />
       </div>
     );
   }
