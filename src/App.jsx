@@ -176,24 +176,8 @@ export default function App() {
               </div>
             </div>
 
-            {/* Quick-look KPIs + Nav */}
+            {/* Quick-look KPIs */}
             <div className="flex flex-col items-end gap-3">
-              {/* Nav tabs */}
-              <nav className="flex gap-2">
-                <button
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-                  style={{ background: "rgba(52,211,153,0.14)", color: "#6ee7b7", border: "1px solid rgba(52,211,153,0.28)" }}
-                >
-                  <LayoutDashboard size={14} /> Dashboard
-                </button>
-                <button
-                  onClick={() => setView("blog")}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200"
-                  style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.08)" }}
-                >
-                  <BookOpen size={14} /> TurfNerd
-                </button>
-              </nav>
             <div className="flex items-center gap-3 flex-wrap">
               {/* Course Health ring */}
               {!loading && health != null && (
@@ -243,16 +227,28 @@ export default function App() {
 
         <div className="max-w-7xl mx-auto flex flex-col gap-5">
 
-          {/* Status bar */}
+          {/* Status bar + blog nav */}
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1,  y:  0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
+            className="flex items-center gap-3"
           >
-            <StatusBar
-              sources={sources} onRefresh={refresh} loading={loading}
-              lastRefreshed={lastRefreshed} nextRefreshIn={countdown}
-            />
+            <div className="flex-1">
+              <StatusBar
+                sources={sources} onRefresh={refresh} loading={loading}
+                lastRefreshed={lastRefreshed} nextRefreshIn={countdown}
+              />
+            </div>
+            <button
+              onClick={() => setView("blog")}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 shrink-0"
+              style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.12)" }}
+              onMouseEnter={e => { e.currentTarget.style.color = "#6ee7b7"; e.currentTarget.style.borderColor = "rgba(52,211,153,0.35)"; }}
+              onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.55)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; }}
+            >
+              <BookOpen size={12} /> TurfNerd
+            </button>
           </motion.div>
 
           {/* Card grid */}
