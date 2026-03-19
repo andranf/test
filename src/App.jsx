@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { BookOpen, LayoutDashboard } from "lucide-react";
 import "./index.css";
 import AnimatedCanvas   from "./components/ui/AnimatedCanvas";
 import GaugeRing        from "./components/ui/GaugeRing";
@@ -10,6 +11,7 @@ import USGACard         from "./components/USGACard";
 import JobsCard         from "./components/JobsCard";
 import TDRCard          from "./components/TDRCard";
 import StatusBar        from "./components/StatusBar";
+import BlogPage         from "./components/blog/BlogPage";
 import { fetchWeather }     from "./services/weatherService";
 import { fetchGreenkeeper } from "./services/greenkeeperService";
 import { fetchUSGA }        from "./services/usgaService";
@@ -79,6 +81,7 @@ function healthColor(pct) {
 }
 
 export default function App() {
+  const [view, setView] = useState("dashboard");
   const { weather, greenkeeper, usga, jobs, tdr, disease, errors, loading, lastRefreshed, countdown, refresh } = useDataFetch();
 
   const sources = [
@@ -100,6 +103,46 @@ export default function App() {
   const stimp  = usga?.metrics?.find(m => m.name.toLowerCase().includes("speed") || m.name.toLowerCase().includes("stimp"))?.value;
   const overdueCount = jobs?.byStatus?.Overdue ?? null;
 
+  if (view === "blog") {
+    return (
+      <div className="relative min-h-screen overflow-x-hidden ranfurlie-bg">
+        <AnimatedCanvas />
+        <div className="relative z-10">
+          {/* Blog nav bar */}
+          <div className="px-4 md:px-6 lg:px-8 pt-5 pb-0 max-w-7xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <p className="text-xs font-bold tracking-[0.28em] uppercase mb-1" style={{ color: "rgba(52,211,153,0.65)" }}>
+                  Cranbourne West · Victoria
+                </p>
+                <div className="flex items-baseline gap-3">
+                  <h1 className="text-3xl font-black tracking-tight leading-none ranfurlie-title">Ranfurlie</h1>
+                  <span className="text-base font-semibold" style={{ color: "rgba(52,211,153,0.8)" }}>GreenOps</span>
+                </div>
+              </div>
+              <nav className="flex gap-2">
+                <button
+                  onClick={() => setView("dashboard")}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200"
+                  style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.08)" }}
+                >
+                  <LayoutDashboard size={14} /> Dashboard
+                </button>
+                <button
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
+                  style={{ background: "rgba(52,211,153,0.14)", color: "#6ee7b7", border: "1px solid rgba(52,211,153,0.28)" }}
+                >
+                  <BookOpen size={14} /> Blog
+                </button>
+              </nav>
+            </div>
+          </div>
+          <BlogPage />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen overflow-x-hidden ranfurlie-bg">
 
@@ -120,6 +163,7 @@ export default function App() {
 
             {/* Brand */}
             <div>
+
               <p className="text-xs font-bold tracking-[0.28em] uppercase mb-1"
                 style={{ color: "rgba(52,211,153,0.65)" }}>
                 Cranbourne West · Victoria
@@ -149,7 +193,24 @@ export default function App() {
               </div>
             </div>
 
-            {/* Quick-look KPIs */}
+            {/* Quick-look KPIs + Nav */}
+            <div className="flex flex-col items-end gap-3">
+              {/* Nav tabs */}
+              <nav className="flex gap-2">
+                <button
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
+                  style={{ background: "rgba(52,211,153,0.14)", color: "#6ee7b7", border: "1px solid rgba(52,211,153,0.28)" }}
+                >
+                  <LayoutDashboard size={14} /> Dashboard
+                </button>
+                <button
+                  onClick={() => setView("blog")}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200"
+                  style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.08)" }}
+                >
+                  <BookOpen size={14} /> Blog
+                </button>
+              </nav>
             <div className="flex items-center gap-3 flex-wrap">
               {/* Course Health ring */}
               {!loading && health != null && (
@@ -192,6 +253,7 @@ export default function App() {
                 </span>
                 <span className="text-sm font-bold" style={{ color: "rgba(52,211,153,0.9)" }}>Live</span>
               </div>
+            </div>
             </div>
           </div>
         </motion.header>
