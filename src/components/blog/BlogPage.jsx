@@ -5,6 +5,19 @@ import { blogPosts, categories } from "../../data/blogPosts";
 import BlogCard from "./BlogCard";
 import BlogPost from "./BlogPost";
 
+function TopBar() {
+  return (
+    <header className="blog-topbar">
+      <div className="blog-topbar-inner">
+        <div className="flex items-center gap-4">
+          <span className="blog-wordmark">TurfNerd</span>
+          <span className="blog-handle">andrewturfnerd</span>
+        </div>
+      </div>
+    </header>
+  );
+}
+
 export default function BlogPage() {
   const [selectedPost, setSelectedPost] = useState(null);
   const [search, setSearch] = useState("");
@@ -25,13 +38,18 @@ export default function BlogPage() {
 
   if (selectedPost) {
     return (
-      <div className="blog-content">
-        <BlogPost post={selectedPost} onBack={() => setSelectedPost(null)} />
+      <div className="blog-shell">
+        <TopBar />
+        <div className="blog-content">
+          <BlogPost post={selectedPost} onBack={() => setSelectedPost(null)} />
+        </div>
       </div>
     );
   }
 
   return (
+    <div className="blog-shell">
+    <TopBar />
     <div className="blog-content">
       <div className="blog-index">
 
@@ -124,6 +142,7 @@ export default function BlogPage() {
           )}
         </AnimatePresence>
       </div>
+    </div>
     </div>
   );
 }
